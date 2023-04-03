@@ -1,0 +1,6 @@
+build/
+mojave.ini
+tests/guests/*.bin
+tests/guests/*/*.bin
+
+mojave/lib/catch.hpp
