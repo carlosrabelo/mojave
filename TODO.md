@@ -20,7 +20,7 @@ implementation checkbox of a new preset.
 
 ## Foundation
 
-- [ ] Directory structure and build automation (`Makefile`, `.make/`)
+- [x] Directory structure and build automation (`Makefile`, `.make/`)
 - [ ] Abstract Device interface and device tick (`tick(cycles)`)
 - [ ] Physical Memory with ROM, `directPointer()`, and out-of-bounds safety
 - [ ] Composite Bus (memory maps + port I/O, optional low-byte port decode)

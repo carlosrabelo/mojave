@@ -9,3 +9,4 @@ coding.
 |-----------|----------|
 | — | none yet |
 
+Implementation order and checkboxes live in `TODO.md` at the repository root.

@@ -6,4 +6,3 @@ Per-machine hardware lives under `docs/machines/`.
 | Topic | Document |
 |-------|----------|
 | — | none yet |
-
