@@ -2,6 +2,10 @@
 
 Cycle-accurate multi-system emulator for classic 8-bit computers.
 
+## Highlights
+
+- Device tick system for cycle-accurate timing of peripherals
+
 ## Prerequisites
 
 - **C++20** compiler (g++ 12+ or clang 16+)
@@ -29,6 +33,7 @@ bin/mojave --help                         # Show usage
 ```
 mojave/              # Component root
 ├── src/
+│   ├── devices/
 ├── tests/              # Catch2 suite (mirrors src/ layout)
 ├── lib/                # Vendored Catch2 header
 .make/               # Build scripts

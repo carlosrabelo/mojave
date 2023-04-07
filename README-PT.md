@@ -2,6 +2,10 @@
 
 Emulador multi-sistema ciclo-a-ciclo para computadores clássicos 8-bit.
 
+## Destaques
+
+- Sistema de tick de dispositivos para temporização ciclo-a-ciclo de periféricos
+
 ## Pré-requisitos
 
 - **C++20** compilador (g++ 12+ or clang 16+)
