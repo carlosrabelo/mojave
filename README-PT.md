@@ -4,6 +4,7 @@ Emulador multi-sistema ciclo-a-ciclo para computadores clássicos 8-bit.
 
 ## Destaques
 
+- Barramento composto com espaços de endereçamento separados para memória e portas de I/O
 - Memória física com regiões ROM somente-leitura e segurança contra limites
 - Sistema de tick de dispositivos para temporização ciclo-a-ciclo de periféricos
 

@@ -4,6 +4,7 @@ Cycle-accurate multi-system emulator for classic 8-bit computers.
 
 ## Highlights
 
+- Composite bus with separate memory and port I/O address spaces
 - Physical memory with read-only ROM regions and out-of-bounds safety
 - Device tick system for cycle-accurate timing of peripherals
 
@@ -34,6 +35,7 @@ bin/mojave --help                         # Show usage
 ```
 mojave/              # Component root
 ├── src/
+│   ├── bus/
 │   ├── devices/
 ├── tests/              # Catch2 suite (mirrors src/ layout)
 ├── lib/                # Vendored Catch2 header
