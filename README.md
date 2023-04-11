@@ -36,6 +36,7 @@ bin/mojave --help                         # Show usage
 mojave/              # Component root
 ├── src/
 │   ├── bus/
+│   ├── cpus/
 │   ├── devices/
 ├── tests/              # Catch2 suite (mirrors src/ layout)
 ├── lib/                # Vendored Catch2 header

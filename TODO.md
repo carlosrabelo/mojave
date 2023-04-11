@@ -25,7 +25,7 @@ implementation checkbox of a new preset.
 - [x] Physical Memory with ROM, `directPointer()`, and out-of-bounds safety
 - [x] Composite Bus (memory maps + port I/O, optional low-byte port decode)
 - [x] Port I/O (`PortDevice` + Bus port routing)
-- [ ] Abstract Cpu (reset, step, halt, register snapshot, page-table hook)
+- [x] Abstract Cpu (reset, step, halt, register snapshot, page-table hook)
 - [ ] Composite Machine (CPU + Bus + owned devices + tick fan-out)
 
 ## Test infrastructure
