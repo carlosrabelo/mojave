@@ -26,7 +26,7 @@ implementation checkbox of a new preset.
 - [x] Composite Bus (memory maps + port I/O, optional low-byte port decode)
 - [x] Port I/O (`PortDevice` + Bus port routing)
 - [x] Abstract Cpu (reset, step, halt, register snapshot, page-table hook)
-- [ ] Composite Machine (CPU + Bus + owned devices + tick fan-out)
+- [x] Composite Machine (CPU + Bus + owned devices + tick fan-out)
 
 ## Test infrastructure
 
