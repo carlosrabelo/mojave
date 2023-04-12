@@ -30,7 +30,7 @@ implementation checkbox of a new preset.
 
 ## Test infrastructure
 
-- [ ] Mirror test tree and shared test utilities
+- [x] Mirror test tree and shared test utilities
 - [ ] Guest program fixtures (asm → `.bin` build system)
 - [ ] Test runner targets (`test-fast`, `test-changed`, `test-all`, `coverage`)
 - [ ] Preset isolation guard (`.make/check-preset-isolation.sh`) and `make check`
