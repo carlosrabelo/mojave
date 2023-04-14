@@ -19,5 +19,5 @@ mapfile -t TEST_SRCS < <(find "$TEST_DIR" -name '*.cpp' -print | LC_ALL=C sort)
 REPO_ROOT="$REPO_ROOT" OBJ_ROOT="$OBJ_ROOT" OUTPUT="$OUTPUT" CXX="$CXX" CXXFLAGS="$CXXFLAGS" \
     "$REPO_ROOT/.make/compile-objects.sh" "${SRC_FILES[@]}" "${TEST_SRCS[@]}"
 
-echo "Running all tests..."
+echo "Running tests..."
 exec "$OUTPUT" "$@"

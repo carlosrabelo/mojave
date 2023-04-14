@@ -49,7 +49,11 @@ mojave/              # Component root
 ```bash
 make setup           # Download dependencies (Catch2)
 make build-tty       # Compile headless mojave binary
+make test-fast       # Incremental compile; run [fast] tests
+make test-changed    # Incremental compile; tests for dirty mojave/ paths
 make test-all        # Full suite (commit gate)
+make quality         # Syntax check, build, and test
+make coverage        # Build and run tests with coverage report
 ```
 
 ## License

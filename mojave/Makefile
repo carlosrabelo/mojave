@@ -2,7 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 .DEFAULT_GOAL := help
 
-.PHONY: build-tty clean fmt help install-tty lint run-tty setup test-all uninstall-tty
+.PHONY: build-tty clean coverage fmt help install-tty lint quality run-tty setup test-all test-changed test-fast uninstall-tty
 
 help: ## Show available targets
 	@echo "mojave - Available targets"
@@ -28,6 +28,18 @@ run-tty: build-tty ## Run mojave
 
 test-all: ## Compile and run all tests
 	@../.make/test-all.sh
+
+test-fast: ## Compile and run only [fast] tests
+	@../.make/test-fast.sh
+
+test-changed: ## Incremental build; run tests for changed mojave/ paths
+	@../.make/test-changed.sh
+
+coverage: ## Build and run tests with coverage report (gcovr)
+	@../.make/coverage.sh
+
+quality: ## All quality checks
+	@../.make/quality.sh
 
 fmt: ## Format source
 	@../.make/fmt.sh

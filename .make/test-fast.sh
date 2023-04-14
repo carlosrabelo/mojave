@@ -11,6 +11,7 @@ OBJ_ROOT="$REPO_ROOT/build/obj/tests"
 BINARY_NAME="${BINARY_NAME:-mojave}"
 CXX="${CXX:-g++}"
 CXXFLAGS="-std=c++20 -Wall -Wextra -Wpedantic -I$SRC_DIR -I$TEST_DIR -I$LIB_DIR"
+TAG="${1:-[fast]}"
 OUTPUT="$BUILD_DIR/${BINARY_NAME}-tests"
 
 mapfile -t SRC_FILES < <(find "$SRC_DIR" -name '*.cpp' ! -path '*/frontend/*' -print | LC_ALL=C sort)
@@ -19,5 +20,5 @@ mapfile -t TEST_SRCS < <(find "$TEST_DIR" -name '*.cpp' -print | LC_ALL=C sort)
 REPO_ROOT="$REPO_ROOT" OBJ_ROOT="$OBJ_ROOT" OUTPUT="$OUTPUT" CXX="$CXX" CXXFLAGS="$CXXFLAGS" \
     "$REPO_ROOT/.make/compile-objects.sh" "${SRC_FILES[@]}" "${TEST_SRCS[@]}"
 
-echo "Running all tests..."
-exec "$OUTPUT" "$@"
+echo "Running tests (tag: $TAG)..."
+exec "$OUTPUT" "$TAG"
