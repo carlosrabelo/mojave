@@ -2,7 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 .DEFAULT_GOAL := help
 
-.PHONY: build-tty clean coverage fmt help install-tty lint quality run-tty setup test-all test-changed test-fast uninstall-tty
+.PHONY: build-tty check clean coverage fmt help install-tty lint quality run-tty setup test-all test-changed test-fast uninstall-tty
 
 help: ## Show available targets
 	@echo "mojave - Available targets"
@@ -34,6 +34,9 @@ test-fast: ## Compile and run only [fast] tests
 
 test-changed: ## Incremental build; run tests for changed mojave/ paths
 	@../.make/test-changed.sh
+
+check: ## Syntax-check all source files
+	@../.make/check.sh
 
 coverage: ## Build and run tests with coverage report (gcovr)
 	@../.make/coverage.sh
