@@ -34,7 +34,7 @@ implementation checkbox of a new preset.
 - [x] Guest program fixtures (asm → `.bin` build system)
 - [x] Test runner targets (`test-fast`, `test-changed`, `test-all`, `coverage`)
 - [x] Preset isolation guard (`.make/check-preset-isolation.sh`) and `make check`
-- [ ] Test and preset-layout conventions documented (`CONTRIBUTING.md`, `docs/shared/`)
+- [x] Test and preset-layout conventions documented (`CONTRIBUTING.md`, `docs/shared/`)
 
 ## CPU stubs
 

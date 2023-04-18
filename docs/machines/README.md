@@ -10,3 +10,4 @@ coding.
 | — | none yet |
 
 Implementation order and checkboxes live in `TODO.md` at the repository root.
+Preset isolation, device families, and naming conventions: [CONTRIBUTING.md](../../CONTRIBUTING.md) and [preset-layout.md](../shared/preset-layout.md).

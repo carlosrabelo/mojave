@@ -5,4 +5,4 @@ Per-machine hardware lives under `docs/machines/`.
 
 | Topic | Document |
 |-------|----------|
-| — | none yet |
+| Preset layout, families, and naming | [preset-layout.md](preset-layout.md) |
