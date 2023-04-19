@@ -38,7 +38,7 @@ implementation checkbox of a new preset.
 
 ## CPU stubs
 
-- [ ] Z80 stub with registers, page-table fast path, and minimal step
+- [x] Z80 stub with registers, page-table fast path, and minimal step
 - [ ] MOS 6502 stub with registers (A, X, Y, SP, P), page-table fast path, and minimal step
 - [ ] MOS 6507 stub (class inheriting M6502; 13-bit address mask; external IRQ/NMI ignored)
 
