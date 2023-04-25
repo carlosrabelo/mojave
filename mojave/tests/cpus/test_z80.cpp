@@ -1,6 +1,8 @@
 #include <cstdint>
 #include "catch.hpp"
 #include "cpus/z80.hpp"
+#include "cpus/z80/dispatch.hpp"
+#include "helpers.hpp"
 
 TEST_CASE("Z80 reset clears all registers and halts", "[cpu][z80][fast]") {
     Z80 cpu;
@@ -65,4 +67,41 @@ TEST_CASE("Z80 registers returns all 14 register entries", "[cpu][z80][fast]") {
     REQUIRE(snap.entries[12].value == 0x12);
     REQUIRE(snap.entries[13].name == "R");
     REQUIRE(snap.entries[13].value == 0x34);
+}
+
+TEST_CASE("Z80 dispatch table has all 256 entries initialized", "[cpu][z80][fast]") {
+    for (int i = 0; i < 256; ++i) {
+        REQUIRE(z80::kDispatch[i] != nullptr);
+    }
+    REQUIRE(z80::kDispatch[0x00] == &Z80::op00);
+    REQUIRE(z80::kDispatch[0xC0] == &Z80::opC0);
+    REQUIRE(z80::kDispatch[0xCB] == &Z80::opCB_prefix);
+}
+
+TEST_CASE("Z80 step on NOP executes NOP and returns 4 cycles", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    bus_and_ram.ram->write(0x0000, 0x00);
+    cpu.regs().pc = 0x0000;
+
+    unsigned cycles = cpu.step();
+
+    REQUIRE(cycles == 4);
+    REQUIRE(cpu.regs().pc == 0x0001);
+}
+
+TEST_CASE("Z80 step on Unimplemented opcode logs and returns 4 cycles", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    bus_and_ram.ram->write(0x0000, 0x40);
+    cpu.regs().pc = 0x0000;
+
+    unsigned cycles = cpu.step();
+
+    REQUIRE(cycles == 4);
+    REQUIRE(cpu.regs().pc == 0x0001);
 }

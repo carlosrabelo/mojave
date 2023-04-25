@@ -1,4 +1,6 @@
 #include "cpus/z80.hpp"
+#include "cpus/z80/dispatch.hpp"
+#include <cstdio>
 
 void Z80::reset() {
     regs_ = Z80Registers{};
@@ -8,7 +10,15 @@ void Z80::reset() {
 
 unsigned Z80::step() {
     if (is_halted) return 4;
-    (void)readByte(regs_.pc++);
+    uint8_t opcode = readByte(regs_.pc++);
+    OpcodeHandler handler = z80::kDispatch[opcode];
+    return (this->*handler)();
+}
+
+unsigned Z80::opUnimplemented() {
+    uint16_t pc = regs_.pc - 1;
+    uint8_t opcode = readByte(pc);
+    std::fprintf(stderr, "Unimplemented Z80 opcode 0x%02X at PC=0x%04X\n", opcode, pc);
     return 4;
 }
 

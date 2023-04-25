@@ -46,7 +46,7 @@ implementation checkbox of a new preset.
 
 Complete this section before any Z80 machine preset.
 
-- [ ] Base dispatch table (256 opcodes)
+- [x] Base dispatch table (256 opcodes)
 - [ ] 8-bit and 16-bit loads, stack operations (00–3F)
 - [ ] LD r,r' and HALT (40–7F)
 - [ ] 8-bit ALU with flags (80–BF)
