@@ -28,6 +28,64 @@ public:
     Z80Registers& regs() { return regs_; }
     const Z80Registers& regs() const { return regs_; }
 
+
+    // Register accessors (high/low parts)
+    uint8_t getA() const { return regs_.af >> 8; }
+    void setA(uint8_t val) { regs_.af = (val << 8) | (regs_.af & 0x00FF); }
+    uint8_t getF() const { return regs_.af & 0xFF; }
+    void setF(uint8_t val) { regs_.af = (regs_.af & 0xFF00) | val; }
+
+    uint8_t getB() const { return regs_.bc >> 8; }
+    void setB(uint8_t val) { regs_.bc = (val << 8) | (regs_.bc & 0x00FF); }
+    uint8_t getC() const { return regs_.bc & 0xFF; }
+    void setC(uint8_t val) { regs_.bc = (regs_.bc & 0xFF00) | val; }
+
+    uint8_t getD() const { return regs_.de >> 8; }
+    void setD(uint8_t val) { regs_.de = (val << 8) | (regs_.de & 0x00FF); }
+    uint8_t getE() const { return regs_.de & 0xFF; }
+    void setE(uint8_t val) { regs_.de = (regs_.de & 0xFF00) | val; }
+
+    uint8_t getH() const { return regs_.hl >> 8; }
+    void setH(uint8_t val) { regs_.hl = (val << 8) | (regs_.hl & 0x00FF); }
+    uint8_t getL() const { return regs_.hl & 0xFF; }
+    void setL(uint8_t val) { regs_.hl = (regs_.hl & 0xFF00) | val; }
+
+    bool getFlagS() const { return (getF() & 0x80) != 0; }
+    bool getFlagZ() const { return (getF() & 0x40) != 0; }
+    bool getFlagH() const { return (getF() & 0x10) != 0; }
+    bool getFlagPV() const { return (getF() & 0x04) != 0; }
+    bool getFlagN() const { return (getF() & 0x02) != 0; }
+    bool getFlagC() const { return (getF() & 0x01) != 0; }
+    bool getFlagF5() const { return (getF() & 0x20) != 0; }
+    bool getFlagF3() const { return (getF() & 0x08) != 0; }
+
+    void setFlagS(bool val) { setF(val ? (getF() | 0x80) : (getF() & ~0x80)); }
+    void setFlagZ(bool val) { setF(val ? (getF() | 0x40) : (getF() & ~0x40)); }
+    void setFlagH(bool val) { setF(val ? (getF() | 0x10) : (getF() & ~0x10)); }
+    void setFlagPV(bool val) { setF(val ? (getF() | 0x04) : (getF() & ~0x04)); }
+    void setFlagN(bool val) { setF(val ? (getF() | 0x02) : (getF() & ~0x02)); }
+    void setFlagC(bool val) { setF(val ? (getF() | 0x01) : (getF() & ~0x01)); }
+    void setFlagF5(bool val) { setF(val ? (getF() | 0x20) : (getF() & ~0x20)); }
+    void setFlagF3(bool val) { setF(val ? (getF() | 0x08) : (getF() & ~0x08)); }
+    void setF35(uint8_t val) {
+        setFlagF3((val & 0x08) != 0);
+        setFlagF5((val & 0x20) != 0);
+    }
+
+    uint8_t fetchByte() { return readByte(regs_.pc++); }
+    uint16_t fetchWord() {
+        uint8_t low = fetchByte();
+        uint8_t high = fetchByte();
+        return (high << 8) | low;
+    }
+
+    bool parity(uint8_t val) const;
+    void daa();
+    void add16(uint16_t& dest, uint16_t src);
+    uint8_t inc8(uint8_t v);
+    uint8_t dec8(uint8_t v);
+
+
     inline uint8_t readByte(uint16_t addr) const {
         uint8_t* page_ptr = read_pages_[addr >> 10];
         if (page_ptr) [[likely]] {

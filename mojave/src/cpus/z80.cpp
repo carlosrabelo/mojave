@@ -65,3 +65,86 @@ RegisterSnapshot Z80::registers() const {
     snap.entries.push_back(RegisterEntry{"R", regs_.r});
     return snap;
 }
+
+void Z80::daa() {
+    uint8_t a = getA();
+    uint8_t adjust = 0;
+    bool carry = getFlagC();
+    bool half = getFlagH();
+    bool subtract = getFlagN();
+
+    if (subtract) {
+        if (carry) {
+            adjust |= 0x60;
+        }
+        if (half) {
+            adjust |= 0x06;
+        }
+        uint16_t result = a - adjust;
+        setA(static_cast<uint8_t>(result));
+        setFlagC(carry);
+    } else {
+        if (carry || a > 0x99) {
+            adjust |= 0x60;
+            carry = true;
+        }
+        if (half || (a & 0x0F) > 0x09) {
+            adjust |= 0x06;
+        }
+        uint16_t result = a + adjust;
+        setA(static_cast<uint8_t>(result));
+        setFlagC(carry);
+    }
+
+    if (subtract) {
+        setFlagH(half && (a & 0x0F) < 6);
+    } else {
+        setFlagH(((a & 0x0F) + (adjust & 0x0F)) > 0x0F);
+    }
+
+    uint8_t new_a = getA();
+    setFlagS((new_a & 0x80) != 0);
+    setFlagZ(new_a == 0);
+    setFlagPV(parity(new_a));
+    setF35(new_a);
+}
+
+bool Z80::parity(uint8_t val) const {
+    unsigned count = 0;
+    for (int i = 0; i < 8; ++i) {
+        if ((val >> i) & 1) count++;
+    }
+    return (count % 2) == 0;
+}
+
+void Z80::add16(uint16_t& dest, uint16_t src) {
+    uint32_t val1 = dest;
+    uint32_t val2 = src;
+    uint32_t res = val1 + val2;
+    dest = static_cast<uint16_t>(res);
+    setFlagC(res > 0xFFFF);
+    setFlagH(((val1 & 0x0FFF) + (val2 & 0x0FFF)) > 0x0FFF);
+    setFlagN(false);
+}
+
+uint8_t Z80::inc8(uint8_t v) {
+    uint8_t res = v + 1;
+    setFlagS((res & 0x80) != 0);
+    setFlagZ(res == 0);
+    setFlagH((v & 0x0F) == 0x0F);
+    setFlagPV(v == 0x7F);
+    setFlagN(false);
+    setF35(res);
+    return res;
+}
+
+uint8_t Z80::dec8(uint8_t v) {
+    uint8_t res = v - 1;
+    setFlagS((res & 0x80) != 0);
+    setFlagZ(res == 0);
+    setFlagH((v & 0x0F) == 0x00);
+    setFlagPV(v == 0x80);
+    setFlagN(true);
+    setF35(res);
+    return res;
+}
