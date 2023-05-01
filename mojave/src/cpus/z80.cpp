@@ -148,3 +148,30 @@ uint8_t Z80::dec8(uint8_t v) {
     setF35(res);
     return res;
 }
+
+uint8_t Z80::getReg(int reg_index) {
+    switch (reg_index) {
+        case 0: return getB();
+        case 1: return getC();
+        case 2: return getD();
+        case 3: return getE();
+        case 4: return getH();
+        case 5: return getL();
+        case 6: return readByte(regs_.hl);
+        case 7: return getA();
+    }
+    return 0;
+}
+
+void Z80::setReg(int reg_index, uint8_t val) {
+    switch (reg_index) {
+        case 0: setB(val); return;
+        case 1: setC(val); return;
+        case 2: setD(val); return;
+        case 3: setE(val); return;
+        case 4: setH(val); return;
+        case 5: setL(val); return;
+        case 6: writeByte(regs_.hl, val); return;
+        case 7: setA(val); return;
+    }
+}

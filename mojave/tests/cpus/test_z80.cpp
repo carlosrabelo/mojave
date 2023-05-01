@@ -369,3 +369,56 @@ TEST_CASE("Z80 Phase 3: Jumps and Branches", "[cpu][z80][fast]") {
     }
 }
 
+
+TEST_CASE("Z80 Phase 4: Register-to-register loads (40-7F) and HALT", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("LD B, C (41) and LD D, E (5B) and LD A, A (7F)") {
+        cpu.setC(0x5A);
+        bus_and_ram.ram->write(0, 0x41);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 4);
+        REQUIRE(cpu.getB() == 0x5A);
+
+        cpu.setE(0x23);
+        bus_and_ram.ram->write(1, 0x53);
+        cpu.regs().pc = 1;
+        cycles = cpu.step();
+        REQUIRE(cycles == 4);
+        REQUIRE(cpu.getD() == 0x23);
+    }
+
+    SECTION("LD r, (HL) (46) and LD (HL), r (70)") {
+        cpu.regs().hl = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0xAA);
+        bus_and_ram.ram->write(0, 0x46);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 7);
+        REQUIRE(cpu.getB() == 0xAA);
+
+        cpu.setC(0x55);
+        bus_and_ram.ram->write(1, 0x71);
+        cpu.regs().pc = 1;
+        cycles = cpu.step();
+        REQUIRE(cycles == 7);
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x55);
+    }
+
+    SECTION("HALT (76)") {
+        bus_and_ram.ram->write(0, 0x76);
+        cpu.regs().pc = 0;
+        REQUIRE_FALSE(cpu.halted());
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 4);
+        REQUIRE(cpu.halted());
+
+        unsigned next_cycles = cpu.step();
+        REQUIRE(next_cycles == 4);
+        REQUIRE(cpu.regs().pc == 1);
+    }
+}
+

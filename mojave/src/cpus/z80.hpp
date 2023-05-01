@@ -85,6 +85,9 @@ public:
     uint8_t inc8(uint8_t v);
     uint8_t dec8(uint8_t v);
 
+    uint8_t getReg(int reg_index);
+    void setReg(int reg_index, uint8_t val);
+
 
     inline uint8_t readByte(uint16_t addr) const {
         uint8_t* page_ptr = read_pages_[addr >> 10];
