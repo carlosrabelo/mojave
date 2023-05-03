@@ -175,3 +175,113 @@ void Z80::setReg(int reg_index, uint8_t val) {
         case 7: setA(val); return;
     }
 }
+
+void Z80::aluADD(uint8_t val) {
+    uint8_t a = getA();
+    uint16_t res = a + val;
+    uint8_t r = static_cast<uint8_t>(res);
+    setA(r);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH(((a & 0x0F) + (val & 0x0F)) > 0x0F);
+    setFlagPV(((a ^ r) & (val ^ r) & 0x80) != 0);
+    setFlagN(false);
+    setFlagC(res > 0xFF);
+    setF35(r);
+}
+
+void Z80::aluADC(uint8_t val) {
+    uint8_t a = getA();
+    uint8_t c = getFlagC() ? 1 : 0;
+    uint16_t res = a + val + c;
+    uint8_t r = static_cast<uint8_t>(res);
+    setA(r);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH(((a & 0x0F) + (val & 0x0F) + c) > 0x0F);
+    setFlagPV(((a ^ r) & (val ^ r) & 0x80) != 0);
+    setFlagN(false);
+    setFlagC(res > 0xFF);
+    setF35(r);
+}
+
+void Z80::aluSUB(uint8_t val) {
+    uint8_t a = getA();
+    uint16_t res = a - val;
+    uint8_t r = static_cast<uint8_t>(res);
+    setA(r);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH((a & 0x0F) < (val & 0x0F));
+    setFlagPV(((a ^ val) & (a ^ r) & 0x80) != 0);
+    setFlagN(true);
+    setFlagC(a < val);
+    setF35(r);
+}
+
+void Z80::aluSBC(uint8_t val) {
+    uint8_t a = getA();
+    uint8_t c = getFlagC() ? 1 : 0;
+    uint16_t temp = static_cast<uint16_t>(val) + c;
+    uint16_t res = a - temp;
+    uint8_t r = static_cast<uint8_t>(res);
+    setA(r);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH((a & 0x0F) < ((val & 0x0F) + c));
+    setFlagPV(((a ^ val) & (a ^ r) & 0x80) != 0);
+    setFlagN(true);
+    setFlagC(a < temp);
+    setF35(r);
+}
+
+void Z80::aluAND(uint8_t val) {
+    uint8_t r = getA() & val;
+    setA(r);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH(true);
+    setFlagPV(parity(r));
+    setFlagN(false);
+    setFlagC(false);
+    setF35(r);
+}
+
+void Z80::aluXOR(uint8_t val) {
+    uint8_t r = getA() ^ val;
+    setA(r);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH(false);
+    setFlagPV(parity(r));
+    setFlagN(false);
+    setFlagC(false);
+    setF35(r);
+}
+
+void Z80::aluOR(uint8_t val) {
+    uint8_t r = getA() | val;
+    setA(r);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH(false);
+    setFlagPV(parity(r));
+    setFlagN(false);
+    setFlagC(false);
+    setF35(r);
+}
+
+void Z80::aluCP(uint8_t val) {
+    uint8_t a = getA();
+    uint16_t res = a - val;
+    uint8_t r = static_cast<uint8_t>(res);
+    setFlagS((r & 0x80) != 0);
+    setFlagZ(r == 0);
+    setFlagH((a & 0x0F) < (val & 0x0F));
+    setFlagPV(((a ^ val) & (a ^ r) & 0x80) != 0);
+    setFlagN(true);
+    setFlagC(a < val);
+    // CP copies F3/F5 from the operand being compared (not the discarded result).
+    setF35(val);
+}
+

@@ -88,6 +88,15 @@ public:
     uint8_t getReg(int reg_index);
     void setReg(int reg_index, uint8_t val);
 
+    void aluADD(uint8_t val);
+    void aluADC(uint8_t val);
+    void aluSUB(uint8_t val);
+    void aluSBC(uint8_t val);
+    void aluAND(uint8_t val);
+    void aluXOR(uint8_t val);
+    void aluOR(uint8_t val);
+    void aluCP(uint8_t val);
+
 
     inline uint8_t readByte(uint16_t addr) const {
         uint8_t* page_ptr = read_pages_[addr >> 10];
