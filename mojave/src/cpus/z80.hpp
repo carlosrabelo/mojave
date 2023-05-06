@@ -97,6 +97,10 @@ public:
     void aluOR(uint8_t val);
     void aluCP(uint8_t val);
 
+    void push16(uint16_t val);
+    uint16_t pop16();
+    bool evalCondition(int cond) const;
+
 
     inline uint8_t readByte(uint16_t addr) const {
         uint8_t* page_ptr = read_pages_[addr >> 10];
@@ -163,6 +167,7 @@ public:
 private:
     Z80Registers regs_{};
     bool is_halted = false;
+    bool after_ei_ = false;
     uint8_t* read_pages_[64] = {};
     uint8_t* write_pages_[64] = {};
 };

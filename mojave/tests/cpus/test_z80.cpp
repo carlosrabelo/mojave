@@ -517,3 +517,153 @@ TEST_CASE("Z80 Phase 5: 8-bit ALU operations", "[cpu][z80][fast]") {
     }
 }
 
+
+TEST_CASE("Z80 Phase 6: Control Flow, Stack, I/O and Prefixes", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("JP absolute and conditional") {
+        bus_and_ram.ram->write(0, 0xC3);
+        bus_and_ram.ram->write(1, 0x00);
+        bus_and_ram.ram->write(2, 0x05);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0500);
+
+        cpu.setFlagZ(false);
+        bus_and_ram.ram->write(0x0500, 0xC2);
+        bus_and_ram.ram->write(0x0501, 0x30);
+        bus_and_ram.ram->write(0x0502, 0x06);
+        cpu.regs().pc = 0x0500;
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0630);
+
+        cpu.setFlagZ(true);
+        bus_and_ram.ram->write(0x0630, 0xC2);
+        bus_and_ram.ram->write(0x0631, 0x00);
+        bus_and_ram.ram->write(0x0632, 0x07);
+        cpu.regs().pc = 0x0630;
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0633);
+    }
+
+    SECTION("CALL and RET conditional/unconditional") {
+        cpu.regs().sp = 0x0F00;
+        bus_and_ram.ram->write(0, 0xCD);
+        bus_and_ram.ram->write(1, 0x00);
+        bus_and_ram.ram->write(2, 0x08);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 17);
+        REQUIRE(cpu.regs().pc == 0x0800);
+        REQUIRE(cpu.regs().sp == 0x0EFE);
+        REQUIRE(bus_and_ram.ram->read(0x0EFE) == 0x03);
+        REQUIRE(bus_and_ram.ram->read(0x0EFF) == 0x00);
+
+        bus_and_ram.ram->write(0x0800, 0xC9);
+        cpu.regs().pc = 0x0800;
+        cycles = cpu.step();
+        REQUIRE(cycles == 10);
+        REQUIRE(cpu.regs().pc == 0x0003);
+        REQUIRE(cpu.regs().sp == 0x0F00);
+    }
+
+    SECTION("PUSH and POP registers") {
+        cpu.regs().sp = 0x0F00;
+        cpu.regs().bc = 0x1234;
+        bus_and_ram.ram->write(0, 0xC5);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().sp == 0x0EFE);
+        REQUIRE(bus_and_ram.ram->read(0x0EFE) == 0x34);
+        REQUIRE(bus_and_ram.ram->read(0x0EFF) == 0x12);
+
+        cpu.regs().bc = 0;
+        bus_and_ram.ram->write(1, 0xC1);
+        cpu.regs().pc = 1;
+        cpu.step();
+        REQUIRE(cpu.regs().bc == 0x1234);
+        REQUIRE(cpu.regs().sp == 0x0F00);
+    }
+
+    SECTION("RST vectors") {
+        cpu.regs().sp = 0x0F00;
+        bus_and_ram.ram->write(0, 0xCF);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0008);
+        REQUIRE(cpu.regs().sp == 0x0EFE);
+        REQUIRE(bus_and_ram.ram->read(0x0EFE) == 0x01);
+        REQUIRE(bus_and_ram.ram->read(0x0EFF) == 0x00);
+    }
+
+    SECTION("EX DE,HL and EX (SP),HL and EXX") {
+        cpu.regs().de = 0x1234;
+        cpu.regs().hl = 0xABCD;
+        bus_and_ram.ram->write(0, 0xEB);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().hl == 0x1234);
+        REQUIRE(cpu.regs().de == 0xABCD);
+
+        cpu.regs().sp = 0x0F00;
+        bus_and_ram.ram->write(0x0F00, 0x78);
+        bus_and_ram.ram->write(0x0F01, 0x56);
+        bus_and_ram.ram->write(1, 0xE3);
+        cpu.regs().pc = 1;
+        cpu.step();
+        REQUIRE(cpu.regs().hl == 0x5678);
+        REQUIRE(bus_and_ram.ram->read(0x0F00) == 0x34);
+        REQUIRE(bus_and_ram.ram->read(0x0F01) == 0x12);
+
+        cpu.regs().bc = 0x1111; cpu.regs().bc_ = 0x2222;
+        bus_and_ram.ram->write(2, 0xD9);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.regs().bc == 0x2222);
+        REQUIRE(cpu.regs().bc_ == 0x1111);
+    }
+
+    SECTION("DI and EI") {
+        cpu.regs().iff1 = cpu.regs().iff2 = true;
+        bus_and_ram.ram->write(0, 0xF3);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE_FALSE(cpu.regs().iff1);
+        REQUIRE_FALSE(cpu.regs().iff2);
+
+        bus_and_ram.ram->write(1, 0xFB);
+        cpu.regs().pc = 1;
+        cpu.step();
+        REQUIRE(cpu.regs().iff1);
+        REQUIRE(cpu.regs().iff2);
+    }
+
+    struct MockPortDevice : public PortDevice {
+        std::unordered_map<uint16_t, uint8_t> ports;
+        uint8_t readPort(uint16_t port) override { return ports[port]; }
+        void writePort(uint16_t port, uint8_t value) override { ports[port] = value; }
+    };
+
+    SECTION("IN and OUT instructions") {
+        MockPortDevice mock_port;
+        bus_and_ram.bus->attachPort(mock_port, 0x0000, 0xFFFF);
+
+        cpu.setA(0x5A);
+        bus_and_ram.ram->write(0, 0xD3);
+        bus_and_ram.ram->write(1, 0x01);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(mock_port.ports[0x5A01] == 0x5A);
+
+        cpu.setA(0x12);
+        mock_port.ports[0x1202] = 0xE7;
+        bus_and_ram.ram->write(2, 0xDB);
+        bus_and_ram.ram->write(3, 0x02);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0xE7);
+    }
+}
+

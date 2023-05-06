@@ -5,6 +5,7 @@
 void Z80::reset() {
     regs_ = Z80Registers{};
     is_halted = false;
+    after_ei_ = false;
     updatePageTable();
 }
 
@@ -283,5 +284,33 @@ void Z80::aluCP(uint8_t val) {
     setFlagC(a < val);
     // CP copies F3/F5 from the operand being compared (not the discarded result).
     setF35(val);
+}
+
+
+void Z80::push16(uint16_t val) {
+    regs_.sp -= 2;
+    writeByte(regs_.sp, val & 0xFF);
+    writeByte(regs_.sp + 1, val >> 8);
+}
+
+uint16_t Z80::pop16() {
+    uint8_t low = readByte(regs_.sp);
+    uint8_t high = readByte(regs_.sp + 1);
+    regs_.sp += 2;
+    return (high << 8) | low;
+}
+
+bool Z80::evalCondition(int cond) const {
+    switch (cond) {
+        case 0: return !getFlagZ(); // NZ
+        case 1: return getFlagZ();  // Z
+        case 2: return !getFlagC(); // NC
+        case 3: return getFlagC();  // C
+        case 4: return !getFlagPV(); // PO
+        case 5: return getFlagPV();  // PE
+        case 6: return !getFlagS();  // P
+        case 7: return getFlagS();   // M
+    }
+    return false;
 }
 

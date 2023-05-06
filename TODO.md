@@ -50,7 +50,7 @@ Complete this section before any Z80 machine preset.
 - [x] 8-bit and 16-bit loads, stack operations (00–3F)
 - [x] LD r,r' and HALT (40–7F)
 - [x] 8-bit ALU with flags (80–BF)
-- [ ] Control flow, CALL/RET, RST, PUSH/POP (C0–FF)
+- [x] Control flow, CALL/RET, RST, PUSH/POP (C0–FF)
 - [ ] CB prefix: shifts, rotates, BIT, SET, RES (including SLL)
 - [ ] ED prefix: ADC/SBC HL, block I/O, IN/OUT, RLD/RRD, official `ED 63`/`ED 6B`
 - [ ] Unofficial ED bytes as 8-cycle NOP
