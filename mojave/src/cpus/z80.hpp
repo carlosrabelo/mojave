@@ -21,6 +21,10 @@ public:
     Z80() = default;
 
     void reset() override;
+
+    uint16_t wz() const { return wz_; }
+    void setWz(uint16_t v) { wz_ = v; }
+
     unsigned step() override;
     bool halted() const override { return is_halted; }
     RegisterSnapshot registers() const override;
@@ -101,6 +105,23 @@ public:
     uint16_t pop16();
     bool evalCondition(int cond) const;
 
+    unsigned executeCB(uint8_t op);
+    uint8_t cbShift(int b, uint8_t val);
+
+#define DECL_CB_ROW(high) \
+    unsigned opCB##high##0(), opCB##high##1(), opCB##high##2(), opCB##high##3(), \
+             opCB##high##4(), opCB##high##5(), opCB##high##6(), opCB##high##7(), \
+             opCB##high##8(), opCB##high##9(), opCB##high##A(), opCB##high##B(), \
+             opCB##high##C(), opCB##high##D(), opCB##high##E(), opCB##high##F();
+
+    DECL_CB_ROW(0) DECL_CB_ROW(1) DECL_CB_ROW(2) DECL_CB_ROW(3)
+    DECL_CB_ROW(4) DECL_CB_ROW(5) DECL_CB_ROW(6) DECL_CB_ROW(7)
+    DECL_CB_ROW(8) DECL_CB_ROW(9) DECL_CB_ROW(A) DECL_CB_ROW(B)
+    DECL_CB_ROW(C) DECL_CB_ROW(D) DECL_CB_ROW(E) DECL_CB_ROW(F)
+
+#undef DECL_CB_ROW
+
+
 
     inline uint8_t readByte(uint16_t addr) const {
         uint8_t* page_ptr = read_pages_[addr >> 10];
@@ -168,6 +189,7 @@ private:
     Z80Registers regs_{};
     bool is_halted = false;
     bool after_ei_ = false;
+    uint16_t wz_ = 0;
     uint8_t* read_pages_[64] = {};
     uint8_t* write_pages_[64] = {};
 };

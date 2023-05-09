@@ -667,3 +667,107 @@ TEST_CASE("Z80 Phase 6: Control Flow, Stack, I/O and Prefixes", "[cpu][z80][fast
     }
 }
 
+
+TEST_CASE("Z80 Phase 7: CB Prefix - Shifts, Rotates, BIT, SET, RES", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("Rotates: RLC B (CB 00) and RL (HL) (CB 16)") {
+        cpu.setB(0x85);
+        bus_and_ram.ram->write(0, 0xCB);
+        bus_and_ram.ram->write(1, 0x00);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 8);
+        REQUIRE(cpu.getB() == 0x0B);
+        REQUIRE(cpu.getFlagC());
+
+        cpu.regs().hl = 0x0600;
+        bus_and_ram.ram->write(0x0600, 0x85);
+        cpu.setFlagC(false);
+        bus_and_ram.ram->write(2, 0xCB);
+        bus_and_ram.ram->write(3, 0x16);
+        cpu.regs().pc = 2;
+        cycles = cpu.step();
+        REQUIRE(cycles == 15);
+        REQUIRE(bus_and_ram.ram->read(0x0600) == 0x0A);
+        REQUIRE(cpu.getFlagC());
+    }
+
+    SECTION("Shifts: SLA C (CB 21) and SRA D (CB 2A) and SRL E (CB 3B) and SLL H (CB 34)") {
+        cpu.setC(0x80);
+        bus_and_ram.ram->write(0, 0xCB);
+        bus_and_ram.ram->write(1, 0x21);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getC() == 0x00);
+        REQUIRE(cpu.getFlagC());
+        REQUIRE(cpu.getFlagZ());
+
+        cpu.setD(0xF0);
+        bus_and_ram.ram->write(2, 0xCB);
+        bus_and_ram.ram->write(3, 0x2A);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.getD() == 0xF8);
+        REQUIRE_FALSE(cpu.getFlagC());
+
+        cpu.setE(0x01);
+        bus_and_ram.ram->write(4, 0xCB);
+        bus_and_ram.ram->write(5, 0x3B);
+        cpu.regs().pc = 4;
+        cpu.step();
+        REQUIRE(cpu.getE() == 0x00);
+        REQUIRE(cpu.getFlagC());
+
+        cpu.setH(0x10);
+        bus_and_ram.ram->write(6, 0xCB);
+        bus_and_ram.ram->write(7, 0x34);
+        cpu.regs().pc = 6;
+        cpu.step();
+        REQUIRE(cpu.getH() == 0x21);
+        REQUIRE_FALSE(cpu.getFlagC());
+    }
+
+    SECTION("BIT b, r - BIT 0, A (CB 47) and BIT 7, (HL) (CB 7E)") {
+        cpu.setA(0x01);
+        bus_and_ram.ram->write(0, 0xCB);
+        bus_and_ram.ram->write(1, 0x47);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 8);
+        REQUIRE_FALSE(cpu.getFlagZ());
+
+        cpu.regs().hl = 0x0600;
+        bus_and_ram.ram->write(0x0600, 0x00);
+        bus_and_ram.ram->write(2, 0xCB);
+        bus_and_ram.ram->write(3, 0x7E);
+        cpu.regs().pc = 2;
+        cycles = cpu.step();
+        REQUIRE(cycles == 12);
+        REQUIRE(cpu.getFlagZ());
+    }
+
+    SECTION("SET and RES - SET 4, B (CB E0) and RES 4, B (CB A0)") {
+        cpu.setB(0x00);
+        bus_and_ram.ram->write(0, 0xCB);
+        bus_and_ram.ram->write(1, 0xE0);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getB() == 0x10);
+
+        bus_and_ram.ram->write(2, 0xCB);
+        bus_and_ram.ram->write(3, 0x80);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.getB() == 0x10);
+
+        bus_and_ram.ram->write(4, 0xCB);
+        bus_and_ram.ram->write(5, 0xA0);
+        cpu.regs().pc = 4;
+        cpu.step();
+        REQUIRE(cpu.getB() == 0x00);
+    }
+}
+

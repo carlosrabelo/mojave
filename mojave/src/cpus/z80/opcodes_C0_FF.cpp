@@ -81,7 +81,11 @@ unsigned Z80::opCA() { // JP Z, nn
     return 10;
 }
 
-unsigned Z80::opCB_prefix() { return opUnimplemented(); }
+unsigned Z80::opCB_prefix() {
+    uint8_t next_op = fetchByte();
+    auto handler = z80::kDispatchCB[next_op];
+    return (this->*handler)();
+}
 
 unsigned Z80::opCC() { // CALL Z, nn
     uint16_t addr = fetchWord();

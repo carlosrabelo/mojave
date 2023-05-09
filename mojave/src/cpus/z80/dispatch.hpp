@@ -6,6 +6,7 @@
 namespace z80 {
 
 extern const OpcodeHandler kDispatch[256];
+extern const OpcodeHandler kDispatchCB[256];
 
 } // namespace z80
 

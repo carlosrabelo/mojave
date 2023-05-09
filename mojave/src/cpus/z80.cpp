@@ -6,6 +6,7 @@ void Z80::reset() {
     regs_ = Z80Registers{};
     is_halted = false;
     after_ei_ = false;
+    wz_ = 0;
     updatePageTable();
 }
 
@@ -312,5 +313,46 @@ bool Z80::evalCondition(int cond) const {
         case 7: return getFlagS();   // M
     }
     return false;
+}
+
+
+uint8_t Z80::cbShift(int b, uint8_t val) {
+    uint8_t res = 0;
+    bool carry = getFlagC();
+    switch (b) {
+        case 0: // RLC
+            setFlagC((val & 0x80) != 0);
+            res = (val << 1) | (val >> 7);
+            break;
+        case 1: // RRC
+            setFlagC((val & 1) != 0);
+            res = (val >> 1) | (val << 7);
+            break;
+        case 2: // RL
+            setFlagC((val & 0x80) != 0);
+            res = (val << 1) | (carry ? 1 : 0);
+            break;
+        case 3: // RR
+            setFlagC((val & 1) != 0);
+            res = (val >> 1) | (carry ? 0x80 : 0);
+            break;
+        case 4: // SLA
+            setFlagC((val & 0x80) != 0);
+            res = val << 1;
+            break;
+        case 5: // SRA
+            setFlagC((val & 1) != 0);
+            res = (val & 0x80) | (val >> 1);
+            break;
+        case 6: // SLL
+            setFlagC((val & 0x80) != 0);
+            res = (val << 1) | 1;
+            break;
+        case 7: // SRL
+            setFlagC((val & 1) != 0);
+            res = val >> 1;
+            break;
+    }
+    return res;
 }
 
