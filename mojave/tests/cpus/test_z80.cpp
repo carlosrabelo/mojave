@@ -969,5 +969,20 @@ TEST_CASE("Z80 Phase 8: ED Prefix - 16-bit ALU, Block operations, I/O, Interrupt
         REQUIRE(bus_and_ram.ram->read(0x0500) == 0x2A);
     }
 
+
+    SECTION("Unofficial ED opcodes are 8-cycle NOPs") {
+        const uint8_t unofficial[] = {0x00, 0x76, 0x77, 0x7E, 0x7F, 0xFF};
+        uint16_t pc = 0;
+        for (uint8_t op : unofficial) {
+            bus_and_ram.ram->write(pc, 0xED);
+            bus_and_ram.ram->write(pc + 1, op);
+            cpu.regs().pc = pc;
+            unsigned cycles = cpu.step();
+            REQUIRE(cycles == 8);
+            REQUIRE(cpu.regs().pc == static_cast<uint16_t>(pc + 2));
+            REQUIRE_FALSE(cpu.halted());
+            pc = static_cast<uint16_t>(pc + 2);
+        }
+    }
 }
 

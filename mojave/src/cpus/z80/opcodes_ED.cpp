@@ -351,7 +351,7 @@ unsigned Z80::executeED(uint8_t op) {
         }
 
         default:
-            return 4;
+            return 8;
     }
 }
 

@@ -53,7 +53,7 @@ Complete this section before any Z80 machine preset.
 - [x] Control flow, CALL/RET, RST, PUSH/POP (C0–FF)
 - [x] CB prefix: shifts, rotates, BIT, SET, RES (including SLL)
 - [x] ED prefix: ADC/SBC HL, block I/O, IN/OUT, RLD/RRD, official `ED 63`/`ED 6B`
-- [ ] Unofficial ED bytes as 8-cycle NOP
+- [x] Unofficial ED bytes as 8-cycle NOP
 - [ ] IX/IY: DD/FD prefix, indexed addressing, DDCB/FDCB
 - [ ] Interrupts (IFF, NMI, INT modes 0/1/2, EI delay)
 - [ ] Undocumented: WZ/MEMPTR, IXH/IXL, F bits 3/5
