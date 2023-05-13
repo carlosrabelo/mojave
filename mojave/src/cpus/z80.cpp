@@ -356,3 +356,141 @@ uint8_t Z80::cbShift(int b, uint8_t val) {
     return res;
 }
 
+
+void Z80::edSBC_HL(uint16_t val) {
+    uint32_t hl = regs_.hl;
+    uint32_t ss = val;
+    uint32_t c = getFlagC() ? 1 : 0;
+    uint32_t temp = ss + c;
+    uint32_t res = hl - temp;
+    uint16_t r = static_cast<uint16_t>(res);
+    regs_.hl = r;
+    setFlagS((r & 0x8000) != 0);
+    setFlagZ(r == 0);
+    setFlagH((hl & 0x0FFF) < ((ss & 0x0FFF) + c));
+    setFlagPV(((hl ^ ss) & (hl ^ r) & 0x8000) != 0);
+    setFlagN(true);
+    setFlagC(hl < temp);
+}
+
+void Z80::edADC_HL(uint16_t val) {
+    uint32_t hl = regs_.hl;
+    uint32_t ss = val;
+    uint32_t c = getFlagC() ? 1 : 0;
+    uint32_t res = hl + ss + c;
+    uint16_t r = static_cast<uint16_t>(res);
+    regs_.hl = r;
+    setFlagS((r & 0x8000) != 0);
+    setFlagZ(r == 0);
+    setFlagH(((hl & 0x0FFF) + (ss & 0x0FFF) + c) > 0x0FFF);
+    setFlagPV(((hl ^ r) & (ss ^ r) & 0x8000) != 0);
+    setFlagN(false);
+    setFlagC(res > 0xFFFF);
+}
+
+void Z80::edNEG() {
+    uint8_t temp = getA();
+    setA(0);
+    aluSUB(temp);
+}
+
+unsigned Z80::edRETN() {
+    regs_.pc = pop16();
+    regs_.iff1 = regs_.iff2;
+    return 14;
+}
+
+void Z80::edLDI() {
+    uint8_t val = readByte(regs_.hl);
+    writeByte(regs_.de, val);
+    regs_.hl++;
+    regs_.de++;
+    regs_.bc--;
+    setFlagH(false);
+    setFlagN(false);
+    setFlagPV(regs_.bc != 0);
+    setF35(val);
+}
+
+void Z80::edLDD() {
+    uint8_t val = readByte(regs_.hl);
+    writeByte(regs_.de, val);
+    regs_.hl--;
+    regs_.de--;
+    regs_.bc--;
+    setFlagH(false);
+    setFlagN(false);
+    setFlagPV(regs_.bc != 0);
+    setF35(val);
+}
+
+void Z80::edCPI() {
+    uint8_t val = readByte(regs_.hl);
+    uint8_t res = getA() - val;
+    regs_.hl++;
+    regs_.bc--;
+    setFlagS((res & 0x80) != 0);
+    setFlagZ(res == 0);
+    setFlagH((getA() & 0x0F) < (val & 0x0F));
+    setFlagPV(regs_.bc != 0);
+    setFlagN(true);
+    setF35(val);
+}
+
+void Z80::edCPD() {
+    uint8_t val = readByte(regs_.hl);
+    uint8_t res = getA() - val;
+    regs_.hl--;
+    regs_.bc--;
+    setFlagS((res & 0x80) != 0);
+    setFlagZ(res == 0);
+    setFlagH((getA() & 0x0F) < (val & 0x0F));
+    setFlagPV(regs_.bc != 0);
+    setFlagN(true);
+    setF35(val);
+}
+
+void Z80::edINI() {
+    uint16_t port = regs_.bc;
+    uint8_t val = bus_ ? bus_->readPort(port) : 0;
+    writeByte(regs_.hl, val);
+    regs_.hl++;
+    setB(getB() - 1);
+    setFlagZ(getB() == 0);
+    setFlagN(true);
+}
+
+void Z80::edIND() {
+    uint16_t port = regs_.bc;
+    uint8_t val = bus_ ? bus_->readPort(port) : 0;
+    writeByte(regs_.hl, val);
+    regs_.hl--;
+    setB(getB() - 1);
+    setFlagZ(getB() == 0);
+    setFlagN(true);
+}
+
+void Z80::edOUTI() {
+    uint8_t val = readByte(regs_.hl);
+    uint16_t port = regs_.bc;
+    if (bus_) {
+        bus_->writePort(port, val);
+    }
+    regs_.hl++;
+    setB(getB() - 1);
+    setFlagZ(getB() == 0);
+    setFlagN(true);
+}
+
+void Z80::edOUTD() {
+    uint8_t val = readByte(regs_.hl);
+    uint16_t port = regs_.bc;
+    if (bus_) {
+        bus_->writePort(port, val);
+    }
+    regs_.hl--;
+    setB(getB() - 1);
+    setFlagZ(getB() == 0);
+    setFlagN(true);
+}
+

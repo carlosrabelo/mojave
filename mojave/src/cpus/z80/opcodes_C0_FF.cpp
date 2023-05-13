@@ -325,7 +325,11 @@ unsigned Z80::opEC() { // CALL PE, nn
     return 10;
 }
 
-unsigned Z80::opED_prefix() { return opUnimplemented(); }
+unsigned Z80::opED_prefix() {
+    uint8_t next_op = fetchByte();
+    auto handler = z80::kDispatchED[next_op];
+    return (this->*handler)();
+}
 
 unsigned Z80::opEE() { // XOR n
     aluXOR(fetchByte());

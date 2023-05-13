@@ -771,3 +771,203 @@ TEST_CASE("Z80 Phase 7: CB Prefix - Shifts, Rotates, BIT, SET, RES", "[cpu][z80]
     }
 }
 
+
+TEST_CASE("Z80 Phase 8: ED Prefix - 16-bit ALU, Block operations, I/O, Interrupt modes", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    struct MockPortDevice : public PortDevice {
+        std::unordered_map<uint16_t, uint8_t> ports;
+        uint8_t readPort(uint16_t port) override { return ports[port]; }
+        void writePort(uint16_t port, uint8_t value) override { ports[port] = value; }
+    } mock_port;
+    bus_and_ram.bus->attachPort(mock_port, 0x0000, 0xFFFF);
+
+    SECTION("IN r,(C) and OUT (C),r") {
+        cpu.regs().bc = 0x1234;
+        mock_port.ports[0x1234] = 0x88;
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x78);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 12);
+        REQUIRE(cpu.getA() == 0x88);
+        REQUIRE(cpu.getFlagS());
+        REQUIRE_FALSE(cpu.getFlagZ());
+
+        cpu.setD(0x55);
+        bus_and_ram.ram->write(2, 0xED);
+        bus_and_ram.ram->write(3, 0x51);
+        cpu.regs().pc = 2;
+        cycles = cpu.step();
+        REQUIRE(cycles == 12);
+        REQUIRE(mock_port.ports[0x1234] == 0x55);
+    }
+
+    SECTION("ADC HL, ss and SBC HL, ss") {
+        cpu.regs().hl = 0x1000;
+        cpu.regs().bc = 0x0100;
+        cpu.setFlagC(true);
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x4A);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 15);
+        REQUIRE(cpu.regs().hl == 0x1101);
+
+        cpu.regs().hl = 0x1000;
+        cpu.regs().de = 0x0100;
+        cpu.setFlagC(true);
+        bus_and_ram.ram->write(2, 0xED);
+        bus_and_ram.ram->write(3, 0x52);
+        cpu.regs().pc = 2;
+        cycles = cpu.step();
+        REQUIRE(cycles == 15);
+        REQUIRE(cpu.regs().hl == 0x0EFF);
+    }
+
+    SECTION("NEG and RETN / RETI") {
+        cpu.setA(0x01);
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x44);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 8);
+        REQUIRE(cpu.getA() == 0xFF);
+        REQUIRE(cpu.getFlagC());
+
+        cpu.regs().sp = 0x0F00;
+        cpu.regs().iff2 = true;
+        bus_and_ram.ram->write(0x0F00, 0x00);
+        bus_and_ram.ram->write(0x0F01, 0x05);
+        bus_and_ram.ram->write(2, 0xED);
+        bus_and_ram.ram->write(3, 0x45);
+        cpu.regs().pc = 2;
+        cycles = cpu.step();
+        REQUIRE(cycles == 14);
+        REQUIRE(cpu.regs().pc == 0x0500);
+        REQUIRE(cpu.regs().iff1);
+    }
+
+    SECTION("LD (nn),xx and LD xx,(nn)") {
+        cpu.regs().de = 0x5678;
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x53);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x06);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 20);
+        REQUIRE(bus_and_ram.ram->read(0x0600) == 0x78);
+        REQUIRE(bus_and_ram.ram->read(0x0601) == 0x56);
+
+        bus_and_ram.ram->write(4, 0xED);
+        bus_and_ram.ram->write(5, 0x4B);
+        bus_and_ram.ram->write(6, 0x00);
+        bus_and_ram.ram->write(7, 0x06);
+        cpu.regs().pc = 4;
+        cycles = cpu.step();
+        REQUIRE(cycles == 20);
+        REQUIRE(cpu.regs().bc == 0x5678);
+    }
+
+    SECTION("LD (nn),HL (ED 63) and LD HL,(nn) (ED 6B)") {
+        cpu.regs().hl = 0xABCD;
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x63);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x07);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 20);
+        REQUIRE(bus_and_ram.ram->read(0x0700) == 0xCD);
+        REQUIRE(bus_and_ram.ram->read(0x0701) == 0xAB);
+        REQUIRE(cpu.regs().pc == 4);
+        REQUIRE_FALSE(cpu.halted());
+
+        cpu.regs().hl = 0;
+        bus_and_ram.ram->write(4, 0xED);
+        bus_and_ram.ram->write(5, 0x6B);
+        bus_and_ram.ram->write(6, 0x00);
+        bus_and_ram.ram->write(7, 0x07);
+        cpu.regs().pc = 4;
+        cycles = cpu.step();
+        REQUIRE(cycles == 20);
+        REQUIRE(cpu.regs().hl == 0xABCD);
+        REQUIRE(cpu.regs().pc == 8);
+        REQUIRE_FALSE(cpu.halted());
+    }
+
+    SECTION("Interrupt modes (IM 0/1/2)") {
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x5E);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().im == 1);
+
+        bus_and_ram.ram->write(2, 0xED);
+        bus_and_ram.ram->write(3, 0x6E);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.regs().im == 2);
+    }
+
+    SECTION("LDI and LDIR and CPI") {
+        cpu.regs().hl = 0x0500;
+        cpu.regs().de = 0x0600;
+        cpu.regs().bc = 2;
+        bus_and_ram.ram->write(0x0500, 0xAA);
+        bus_and_ram.ram->write(0x0501, 0xBB);
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0xB0);
+        cpu.regs().pc = 0;
+
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 21);
+        REQUIRE(bus_and_ram.ram->read(0x0600) == 0xAA);
+        REQUIRE(cpu.regs().bc == 1);
+        REQUIRE(cpu.regs().pc == 0);
+
+        cycles = cpu.step();
+        REQUIRE(cycles == 16);
+        REQUIRE(bus_and_ram.ram->read(0x0601) == 0xBB);
+        REQUIRE(cpu.regs().bc == 0);
+        REQUIRE(cpu.regs().pc == 2);
+
+        cpu.setA(0x3C);
+        cpu.regs().hl = 0x0500;
+        cpu.regs().bc = 1;
+        bus_and_ram.ram->write(0x0500, 0x3C);
+        bus_and_ram.ram->write(2, 0xED);
+        bus_and_ram.ram->write(3, 0xA1);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE(cpu.regs().hl == 0x0501);
+        REQUIRE_FALSE(cpu.getFlagPV());
+    }
+
+    SECTION("RLD and RRD") {
+        cpu.setA(0x8A);
+        cpu.regs().hl = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0x12);
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x67);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x82);
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0xA1);
+
+        cpu.setA(0x8A);
+        bus_and_ram.ram->write(0x0500, 0x12);
+        bus_and_ram.ram->write(2, 0xED);
+        bus_and_ram.ram->write(3, 0x6F);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x81);
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x2A);
+    }
+
+}
+

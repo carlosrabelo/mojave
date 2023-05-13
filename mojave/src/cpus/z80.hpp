@@ -108,6 +108,35 @@ public:
     unsigned executeCB(uint8_t op);
     uint8_t cbShift(int b, uint8_t val);
 
+    void edSBC_HL(uint16_t val);
+    void edADC_HL(uint16_t val);
+    void edNEG();
+    unsigned edRETN();
+    void edLDI();
+    void edLDD();
+    void edCPI();
+    void edCPD();
+    void edINI();
+    void edIND();
+    void edOUTI();
+    void edOUTD();
+
+    unsigned executeED(uint8_t op);
+
+#define DECL_ED_ROW(high) \
+    unsigned opED##high##0(), opED##high##1(), opED##high##2(), opED##high##3(), \
+             opED##high##4(), opED##high##5(), opED##high##6(), opED##high##7(), \
+             opED##high##8(), opED##high##9(), opED##high##A(), opED##high##B(), \
+             opED##high##C(), opED##high##D(), opED##high##E(), opED##high##F();
+
+    DECL_ED_ROW(0) DECL_ED_ROW(1) DECL_ED_ROW(2) DECL_ED_ROW(3)
+    DECL_ED_ROW(4) DECL_ED_ROW(5) DECL_ED_ROW(6) DECL_ED_ROW(7)
+    DECL_ED_ROW(8) DECL_ED_ROW(9) DECL_ED_ROW(A) DECL_ED_ROW(B)
+    DECL_ED_ROW(C) DECL_ED_ROW(D) DECL_ED_ROW(E) DECL_ED_ROW(F)
+
+#undef DECL_ED_ROW
+
+
 #define DECL_CB_ROW(high) \
     unsigned opCB##high##0(), opCB##high##1(), opCB##high##2(), opCB##high##3(), \
              opCB##high##4(), opCB##high##5(), opCB##high##6(), opCB##high##7(), \
