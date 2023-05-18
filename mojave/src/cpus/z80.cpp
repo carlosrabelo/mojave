@@ -5,6 +5,8 @@
 void Z80::reset() {
     regs_ = Z80Registers{};
     is_halted = false;
+    prefix_dd_ = false;
+    prefix_fd_ = false;
     after_ei_ = false;
     wz_ = 0;
     updatePageTable();
@@ -14,7 +16,10 @@ unsigned Z80::step() {
     if (is_halted) return 4;
     uint8_t opcode = readByte(regs_.pc++);
     OpcodeHandler handler = z80::kDispatch[opcode];
-    return (this->*handler)();
+    unsigned cycles = (this->*handler)();
+    prefix_dd_ = false;
+    prefix_fd_ = false;
+    return cycles;
 }
 
 unsigned Z80::opUnimplemented() {
@@ -152,6 +157,21 @@ uint8_t Z80::dec8(uint8_t v) {
 }
 
 uint8_t Z80::getReg(int reg_index) {
+    if (prefix_dd_) {
+        if (reg_index == 4) return regs_.ix >> 8;
+        if (reg_index == 5) return regs_.ix & 0xFF;
+        if (reg_index == 6) {
+            int8_t d = static_cast<int8_t>(readByte(regs_.pc++));
+            return readByte(regs_.ix + d);
+        }
+    } else if (prefix_fd_) {
+        if (reg_index == 4) return regs_.iy >> 8;
+        if (reg_index == 5) return regs_.iy & 0xFF;
+        if (reg_index == 6) {
+            int8_t d = static_cast<int8_t>(readByte(regs_.pc++));
+            return readByte(regs_.iy + d);
+        }
+    }
     switch (reg_index) {
         case 0: return getB();
         case 1: return getC();
@@ -166,15 +186,32 @@ uint8_t Z80::getReg(int reg_index) {
 }
 
 void Z80::setReg(int reg_index, uint8_t val) {
+    if (prefix_dd_) {
+        if (reg_index == 4) { regs_.ix = (val << 8) | (regs_.ix & 0xFF); return; }
+        if (reg_index == 5) { regs_.ix = (regs_.ix & 0xFF00) | val; return; }
+        if (reg_index == 6) {
+            int8_t d = static_cast<int8_t>(readByte(regs_.pc++));
+            writeByte(regs_.ix + d, val);
+            return;
+        }
+    } else if (prefix_fd_) {
+        if (reg_index == 4) { regs_.iy = (val << 8) | (regs_.iy & 0xFF); return; }
+        if (reg_index == 5) { regs_.iy = (regs_.iy & 0xFF00) | val; return; }
+        if (reg_index == 6) {
+            int8_t d = static_cast<int8_t>(readByte(regs_.pc++));
+            writeByte(regs_.iy + d, val);
+            return;
+        }
+    }
     switch (reg_index) {
-        case 0: setB(val); return;
-        case 1: setC(val); return;
-        case 2: setD(val); return;
-        case 3: setE(val); return;
-        case 4: setH(val); return;
-        case 5: setL(val); return;
-        case 6: writeByte(regs_.hl, val); return;
-        case 7: setA(val); return;
+        case 0: setB(val); break;
+        case 1: setC(val); break;
+        case 2: setD(val); break;
+        case 3: setE(val); break;
+        case 4: setH(val); break;
+        case 5: setL(val); break;
+        case 6: writeByte(regs_.hl, val); break;
+        case 7: setA(val); break;
     }
 }
 

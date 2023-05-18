@@ -123,6 +123,16 @@ public:
 
     unsigned executeED(uint8_t op);
 
+    uint16_t& indexReg();
+    int8_t fetchDisp() { return static_cast<int8_t>(fetchByte()); }
+    void incIndexHalf(int idx);
+    void decIndexHalf(int idx);
+    void incIndexedMem();
+    void decIndexedMem();
+    unsigned executeDD(uint8_t op);
+    unsigned executeDDCB();
+
+
 #define DECL_ED_ROW(high) \
     unsigned opED##high##0(), opED##high##1(), opED##high##2(), opED##high##3(), \
              opED##high##4(), opED##high##5(), opED##high##6(), opED##high##7(), \
@@ -217,6 +227,8 @@ public:
 private:
     Z80Registers regs_{};
     bool is_halted = false;
+    bool prefix_dd_ = false;
+    bool prefix_fd_ = false;
     bool after_ei_ = false;
     uint16_t wz_ = 0;
     uint8_t* read_pages_[64] = {};

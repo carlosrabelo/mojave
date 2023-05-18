@@ -986,3 +986,436 @@ TEST_CASE("Z80 Phase 8: ED Prefix - 16-bit ALU, Block operations, I/O, Interrupt
     }
 }
 
+
+TEST_CASE("Z80 Phase 9: IX/IY 16-bit loads and arithmetic (DD/FD)", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("LD IX,nn (DD 21) and LD IY,nn (FD 21)") {
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x21);
+        bus_and_ram.ram->write(2, 0x34);
+        bus_and_ram.ram->write(3, 0x12);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 14);
+        REQUIRE(cpu.regs().ix == 0x1234);
+        REQUIRE(cpu.regs().pc == 4);
+
+        bus_and_ram.ram->write(4, 0xFD);
+        bus_and_ram.ram->write(5, 0x21);
+        bus_and_ram.ram->write(6, 0x78);
+        bus_and_ram.ram->write(7, 0x56);
+        cpu.regs().pc = 4;
+        cpu.step();
+        REQUIRE(cpu.regs().iy == 0x5678);
+    }
+
+    SECTION("INC IX (DD 23) and DEC IX (DD 2B)") {
+        cpu.regs().ix = 0x1000;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x23);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 10);
+        REQUIRE(cpu.regs().ix == 0x1001);
+
+        bus_and_ram.ram->write(2, 0xDD);
+        bus_and_ram.ram->write(3, 0x2B);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.regs().ix == 0x1000);
+    }
+
+    SECTION("ADD IX,BC (DD 09) with half-carry") {
+        cpu.regs().ix = 0x0FFF;
+        cpu.regs().bc = 0x0001;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x09);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 15);
+        REQUIRE(cpu.regs().ix == 0x1000);
+        REQUIRE(cpu.getFlagH());
+        REQUIRE_FALSE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("ADD IX,IX (DD 29)") {
+        cpu.regs().ix = 0x0003;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x29);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().ix == 0x0006);
+    }
+
+    SECTION("ADD IY,SP (FD 39)") {
+        cpu.regs().iy = 0x0010;
+        cpu.regs().sp = 0x0020;
+        bus_and_ram.ram->write(0, 0xFD);
+        bus_and_ram.ram->write(1, 0x39);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 15);
+        REQUIRE(cpu.regs().iy == 0x0030);
+    }
+
+    SECTION("LD (nn),IX (DD 22) and LD IX,(nn) (DD 2A)") {
+        cpu.regs().ix = 0xBEEF;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x22);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x06); // nn = 0x0600
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 20);
+        REQUIRE(bus_and_ram.ram->read(0x0600) == 0xEF);
+        REQUIRE(bus_and_ram.ram->read(0x0601) == 0xBE);
+
+        cpu.regs().ix = 0;
+        bus_and_ram.ram->write(4, 0xDD);
+        bus_and_ram.ram->write(5, 0x2A);
+        bus_and_ram.ram->write(6, 0x00);
+        bus_and_ram.ram->write(7, 0x06);
+        cpu.regs().pc = 4;
+        cpu.step();
+        REQUIRE(cpu.regs().ix == 0xBEEF);
+    }
+}
+
+TEST_CASE("Z80 Phase 9: indexed addressing (IX+d) and (IY+d)", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("LD A,(IX+d) (DD 7E) with positive displacement") {
+        cpu.regs().ix = 0x0500;
+        bus_and_ram.ram->write(0x0502, 0x42);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x7E);
+        bus_and_ram.ram->write(2, 0x02); // d = +2
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 19);
+        REQUIRE(cpu.getA() == 0x42);
+        REQUIRE(cpu.regs().pc == 3);
+    }
+
+    SECTION("LD A,(IY+d) (FD 7E) with negative displacement") {
+        cpu.regs().iy = 0x0500;
+        bus_and_ram.ram->write(0x04FE, 0x77);
+        bus_and_ram.ram->write(0, 0xFD);
+        bus_and_ram.ram->write(1, 0x7E);
+        bus_and_ram.ram->write(2, 0xFE); // d = -2
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x77);
+    }
+
+    SECTION("LD (IX+d),A (DD 77)") {
+        cpu.regs().ix = 0x0500;
+        cpu.setA(0xCC);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x77);
+        bus_and_ram.ram->write(2, 0x05); // d = +5
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0505) == 0xCC);
+    }
+
+    SECTION("LD (IX+d),n (DD 36)") {
+        cpu.regs().ix = 0x0500;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x36);
+        bus_and_ram.ram->write(2, 0x03); // d = +3
+        bus_and_ram.ram->write(3, 0xEE); // n
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 19);
+        REQUIRE(bus_and_ram.ram->read(0x0503) == 0xEE);
+        REQUIRE(cpu.regs().pc == 4);
+    }
+
+    SECTION("INC (IX+d) (DD 34) and DEC (IX+d) (DD 35)") {
+        cpu.regs().ix = 0x0500;
+        bus_and_ram.ram->write(0x0501, 0xFF);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x34);
+        bus_and_ram.ram->write(2, 0x01);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 23);
+        REQUIRE(bus_and_ram.ram->read(0x0501) == 0x00);
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+
+        bus_and_ram.ram->write(3, 0xDD);
+        bus_and_ram.ram->write(4, 0x35);
+        bus_and_ram.ram->write(5, 0x01);
+        cpu.regs().pc = 3;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0501) == 0xFF);
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("H/L quirk: LD H,(IX+d) (DD 66) targets real H") {
+        cpu.regs().ix = 0x0500;
+        cpu.regs().hl = 0x0000;
+        bus_and_ram.ram->write(0x0500, 0x42);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x66);
+        bus_and_ram.ram->write(2, 0x00);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getH() == 0x42);
+        REQUIRE(cpu.regs().ix == 0x0500); // IX unchanged
+    }
+
+    SECTION("H/L quirk: LD (IX+d),H (DD 74) reads real H") {
+        cpu.regs().ix = 0x0500;
+        cpu.setH(0x99);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x74);
+        bus_and_ram.ram->write(2, 0x00);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x99);
+    }
+
+    SECTION("ALU with (IX+d): ADD A,(IX+d) (DD 86)") {
+        cpu.regs().ix = 0x0500;
+        cpu.setA(0x10);
+        bus_and_ram.ram->write(0x0500, 0x20);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x86);
+        bus_and_ram.ram->write(2, 0x00);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 19);
+        REQUIRE(cpu.getA() == 0x30);
+        REQUIRE_FALSE(cpu.getFlagC());
+    }
+
+    SECTION("ALU with IXH: CP IXH (DD BC)") {
+        cpu.regs().ix = 0x3400;
+        cpu.setA(0x12);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xBC);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getFlagC());   // 0x12 < 0x34
+        REQUIRE_FALSE(cpu.getFlagZ());
+    }
+}
+
+TEST_CASE("Z80 Phase 9: IX stack and control flow", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("PUSH IX (DD E5) and POP IX (DD E1)") {
+        cpu.regs().ix = 0xBEEF;
+        cpu.regs().sp = 0x0F00;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xE5);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 15);
+        REQUIRE(bus_and_ram.ram->read(0x0EFE) == 0xEF);
+        REQUIRE(bus_and_ram.ram->read(0x0EFF) == 0xBE);
+        REQUIRE(cpu.regs().sp == 0x0EFE);
+
+        cpu.regs().ix = 0;
+        bus_and_ram.ram->write(2, 0xDD);
+        bus_and_ram.ram->write(3, 0xE1);
+        cpu.regs().pc = 2;
+        REQUIRE(cpu.step() == 14);
+        REQUIRE(cpu.regs().ix == 0xBEEF);
+        REQUIRE(cpu.regs().sp == 0x0F00);
+    }
+
+    SECTION("EX (SP),IX (DD E3)") {
+        cpu.regs().ix = 0x1111;
+        cpu.regs().sp = 0x0F00;
+        bus_and_ram.ram->write(0x0F00, 0xCD);
+        bus_and_ram.ram->write(0x0F01, 0xAB);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xE3);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 23);
+        REQUIRE(cpu.regs().ix == 0xABCD);
+        REQUIRE(bus_and_ram.ram->read(0x0F00) == 0x11);
+        REQUIRE(bus_and_ram.ram->read(0x0F01) == 0x11);
+    }
+
+    SECTION("JP (IX) (DD E9)") {
+        cpu.regs().ix = 0x1234;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xE9);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 8);
+        REQUIRE(cpu.regs().pc == 0x1234);
+    }
+
+    SECTION("LD SP,IX (DD F9)") {
+        cpu.regs().ix = 0x4321;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xF9);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 10);
+        REQUIRE(cpu.regs().sp == 0x4321);
+    }
+}
+
+TEST_CASE("Z80 Phase 9: DDCB compound operations", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("RLC (IX+d) (DDCB d 06) updates memory only") {
+        cpu.regs().ix = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0x81);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00); // d
+        bus_and_ram.ram->write(3, 0x06); // RLC (IX+d)
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 23);
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x03);
+        REQUIRE(cpu.getFlagC());
+    }
+
+    SECTION("LD B,RLC (IX+d) (DDCB d 00) copies to B too") {
+        cpu.regs().ix = 0x0500;
+        cpu.setB(0x00);
+        bus_and_ram.ram->write(0x0500, 0x01);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x00); // LD B,RLC (IX+d)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x02);
+        REQUIRE(cpu.getB() == 0x02);
+    }
+
+    SECTION("LD H,SRL (IX+d) (DDCB d 3C) copies to real H") {
+        cpu.regs().ix = 0x0500;
+        cpu.regs().hl = 0x0000;
+        bus_and_ram.ram->write(0x0500, 0x02);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x3C); // LD H,SRL (IX+d)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x01);
+        REQUIRE(cpu.getH() == 0x01);
+    }
+
+    SECTION("BIT 0,(IX+d) (DDCB d 46)") {
+        cpu.regs().ix = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0x00);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x46); // BIT 0,(IX+d)
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 20);
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE(cpu.getFlagH());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("RES 0,(IX+d) (DDCB d 86)") {
+        cpu.regs().ix = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0xFF);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x86); // RES 0,(IX+d)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0xFE);
+    }
+
+    SECTION("SET 7,(IX+d) (DDCB d FE)") {
+        cpu.regs().ix = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0x00);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0xFE); // SET 7,(IX+d)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x80);
+    }
+
+    SECTION("FDCB mirror: RRC (IY+d)") {
+        cpu.regs().iy = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0x01);
+        bus_and_ram.ram->write(0, 0xFD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00);
+        bus_and_ram.ram->write(3, 0x0E); // RRC (IY+d)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x80);
+        REQUIRE(cpu.getFlagC());
+    }
+}
+
+TEST_CASE("Z80 Phase 9: DD/FD prefix fallthrough and nesting", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("DD + NOP: prefix acts as NOP") {
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x00);
+        cpu.regs().pc = 0;
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 8);
+        REQUIRE(cpu.regs().pc == 2);
+    }
+
+    SECTION("DD + LD B,C (DD 41): no IX effect") {
+        cpu.setB(0x00);
+        cpu.setC(0x55);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x41);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getB() == 0x55);
+    }
+
+    SECTION("DD + CCF (DD 3F): runs as CCF") {
+        cpu.regs().hl = 0x1234; // must stay untouched
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x3F);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getFlagC());     // CCF sets carry
+        REQUIRE(cpu.regs().hl == 0x1234);
+    }
+
+    SECTION("Nested prefixes: DD FD -> IY wins") {
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xFD);
+        bus_and_ram.ram->write(2, 0x21);
+        bus_and_ram.ram->write(3, 0x11);
+        bus_and_ram.ram->write(4, 0x22);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().iy == 0x2211);
+        REQUIRE(cpu.regs().ix == 0x0000);
+    }
+
+    SECTION("Nested prefixes: FD DD -> IX wins") {
+        bus_and_ram.ram->write(0, 0xFD);
+        bus_and_ram.ram->write(1, 0xDD);
+        bus_and_ram.ram->write(2, 0x23); // INC IX
+        cpu.regs().ix = 0x0001;
+        cpu.regs().iy = 0x0001;
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.regs().ix == 0x0002);
+        REQUIRE(cpu.regs().iy == 0x0001); // IY untouched
+    }
+}
+

@@ -217,7 +217,12 @@ unsigned Z80::opDC() { // CALL C, nn
     return 10;
 }
 
-unsigned Z80::opDD_prefix() { return opUnimplemented(); }
+unsigned Z80::opDD_prefix() { // DD prefix -> IX indexed addressing
+    prefix_dd_ = true;
+    prefix_fd_ = false;
+    uint8_t next_op = fetchByte();
+    return executeDD(next_op);
+}
 
 unsigned Z80::opDE() { // SBC A, n
     aluSBC(fetchByte());
@@ -433,7 +438,12 @@ unsigned Z80::opFC() { // CALL M, nn
     return 10;
 }
 
-unsigned Z80::opFD_prefix() { return opUnimplemented(); }
+unsigned Z80::opFD_prefix() { // FD prefix -> IY indexed addressing
+    prefix_fd_ = true;
+    prefix_dd_ = false;
+    uint8_t next_op = fetchByte();
+    return executeDD(next_op);
+}
 
 unsigned Z80::opFE() { // CP n
     aluCP(fetchByte());
