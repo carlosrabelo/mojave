@@ -132,6 +132,14 @@ public:
     unsigned executeDD(uint8_t op);
     unsigned executeDDCB();
 
+    void requestNmi() { nmi_pending_ = true; }
+    void setIntLine(bool level) { int_line_ = level; }
+    void setIntData(uint8_t data) { int_data_ = data; }
+    void bumpR();
+    unsigned serviceNmi();
+    unsigned serviceInt();
+
+
 
 #define DECL_ED_ROW(high) \
     unsigned opED##high##0(), opED##high##1(), opED##high##2(), opED##high##3(), \
@@ -229,6 +237,9 @@ private:
     bool is_halted = false;
     bool prefix_dd_ = false;
     bool prefix_fd_ = false;
+    bool nmi_pending_ = false;
+    bool int_line_ = false;
+    uint8_t int_data_ = 0;
     bool after_ei_ = false;
     uint16_t wz_ = 0;
     uint8_t* read_pages_[64] = {};

@@ -1419,3 +1419,238 @@ TEST_CASE("Z80 Phase 9: DD/FD prefix fallthrough and nesting", "[cpu][z80][fast]
     }
 }
 
+
+TEST_CASE("Z80 Phase 10: NMI non-maskable interrupt", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x2000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("NMI saves PC, jumps to 0x0066, clears IFF1") {
+        cpu.regs().pc = 0x1234;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().iff1 = true;
+        cpu.regs().iff2 = false;
+
+        cpu.requestNmi();
+        unsigned cycles = cpu.step();
+
+        REQUIRE(cycles == 11);
+        REQUIRE(cpu.regs().pc == 0x0066);
+        REQUIRE(cpu.regs().sp == 0x0FFE);
+        REQUIRE(bus_and_ram.ram->read(0x0FFE) == 0x34); // low byte of return addr
+        REQUIRE(bus_and_ram.ram->read(0x0FFF) == 0x12); // high byte
+        REQUIRE_FALSE(cpu.regs().iff1);                  // disabled in ISR
+        REQUIRE(cpu.regs().iff2);                        // saved old IFF1
+        REQUIRE_FALSE(cpu.halted());
+    }
+
+    SECTION("NMI has priority over INT") {
+        cpu.regs().pc = 0x0100;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().iff1 = true;
+        cpu.regs().im = 1;
+        cpu.setIntLine(true);
+        cpu.requestNmi();
+
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0066); // NMI vector, not 0x0038
+    }
+
+    SECTION("NMI releases HALT") {
+        bus_and_ram.ram->write(0, 0x76); // HALT
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.halted());
+
+        cpu.regs().sp = 0x1000;
+        cpu.requestNmi();
+        cpu.step();
+        REQUIRE_FALSE(cpu.halted());
+        REQUIRE(cpu.regs().pc == 0x0066);
+    }
+}
+
+TEST_CASE("Z80 Phase 10: INT modes 0/1/2", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x2000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("INT is ignored when IFF1 is clear") {
+        cpu.regs().pc = 0x0100;
+        cpu.regs().iff1 = false;
+        cpu.regs().im = 1;
+        cpu.setIntLine(true);
+        bus_and_ram.ram->write(0x0100, 0x00); // NOP
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0101); // NOP executed, no jump
+    }
+
+    SECTION("INT mode 1 jumps to 0x0038") {
+        cpu.regs().pc = 0x0100;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().iff1 = true;
+        cpu.regs().im = 1;
+        cpu.setIntLine(true);
+
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 13);
+        REQUIRE(cpu.regs().pc == 0x0038);
+        REQUIRE(cpu.regs().sp == 0x0FFE);
+        REQUIRE(bus_and_ram.ram->read(0x0FFE) == 0x00);
+        REQUIRE(bus_and_ram.ram->read(0x0FFF) == 0x01); // return addr 0x0100
+        REQUIRE_FALSE(cpu.regs().iff1); // disabled in ISR
+    }
+
+    SECTION("INT mode 2 reads vector and forms ISR address") {
+        cpu.regs().pc = 0x0100;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().iff1 = true;
+        cpu.regs().im = 2;
+        cpu.regs().i = 0x10;
+        cpu.setIntData(0x40);                 // vector byte -> address 0x1040
+        bus_and_ram.ram->write(0x1040, 0xCD); // ISR low
+        bus_and_ram.ram->write(0x1041, 0xAB); // ISR high
+        cpu.setIntLine(true);
+
+        unsigned cycles = cpu.step();
+        REQUIRE(cycles == 19);
+        REQUIRE(cpu.regs().pc == 0xABCD);
+        REQUIRE(cpu.regs().sp == 0x0FFE);
+        REQUIRE_FALSE(cpu.regs().iff1);
+    }
+
+    SECTION("INT mode 0 executes the data-bus opcode (RST 38)") {
+        cpu.regs().pc = 0x0100;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().iff1 = true;
+        cpu.regs().im = 0;
+        cpu.setIntData(0xFF); // RST 38H opcode
+        cpu.setIntLine(true);
+
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0038);
+        REQUIRE(cpu.regs().sp == 0x0FFE);
+        REQUIRE(bus_and_ram.ram->read(0x0FFE) == 0x00);
+        REQUIRE(bus_and_ram.ram->read(0x0FFF) == 0x01); // return addr 0x0100
+        REQUIRE_FALSE(cpu.regs().iff1);
+    }
+}
+
+TEST_CASE("Z80 Phase 10: EI/DI interrupt acceptance", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x2000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("EI delays interrupt acceptance by one instruction") {
+        // Program: EI, NOP, NOP ; INT line held high the whole time.
+        bus_and_ram.ram->write(0, 0xFB);
+        bus_and_ram.ram->write(1, 0x00);
+        bus_and_ram.ram->write(2, 0x00);
+        cpu.regs().pc = 0;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().im = 1;
+        cpu.regs().iff1 = false;
+        cpu.setIntLine(true);
+
+        cpu.step(); // EI: IFF becomes set, after_ei armed
+        REQUIRE(cpu.regs().iff1);
+        REQUIRE(cpu.regs().pc == 1);
+
+        cpu.step(); // NOP: must NOT accept the interrupt yet (EI delay)
+        REQUIRE(cpu.regs().pc == 2); // advanced normally, not 0x0038
+
+        cpu.step(); // now the interrupt is accepted
+        REQUIRE(cpu.regs().pc == 0x0038);
+        REQUIRE(bus_and_ram.ram->read(0x0FFE) == 0x02); // return addr 2
+    }
+
+    SECTION("DI clears IFF immediately and blocks INT") {
+        // Program: DI, NOP ; INT line asserted only after DI executes.
+        bus_and_ram.ram->write(0, 0xF3);
+        bus_and_ram.ram->write(1, 0x00);
+        cpu.regs().pc = 0;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().im = 1;
+        cpu.regs().iff1 = true;
+        cpu.setIntLine(false);
+
+        cpu.step(); // DI
+        REQUIRE_FALSE(cpu.regs().iff1);
+
+        cpu.setIntLine(true);
+        cpu.step(); // NOP: INT must not be accepted
+        REQUIRE(cpu.regs().pc == 2); // not 0x0038
+    }
+
+    SECTION("INT accepted immediately when already enabled") {
+        bus_and_ram.ram->write(0x0100, 0x00); // NOP (never reached)
+        cpu.regs().pc = 0x0100;
+        cpu.regs().sp = 0x1000;
+        cpu.regs().im = 1;
+        cpu.regs().iff1 = true;
+        cpu.setIntLine(true);
+
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x0038);
+    }
+}
+
+TEST_CASE("Z80 Phase 10: refresh register R and LD A,I/R flags", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x2000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("R increments on each instruction fetch") {
+        cpu.reset();
+        bus_and_ram.ram->write(0, 0x00); // NOP
+        bus_and_ram.ram->write(1, 0x00);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.regs().r == 0);
+
+        cpu.step();
+        REQUIRE(cpu.regs().r == 1);
+        cpu.step();
+        REQUIRE(cpu.regs().r == 2);
+    }
+
+    SECTION("R preserves bit 7") {
+        cpu.reset();
+        cpu.regs().r = 0x80;
+        bus_and_ram.ram->write(0, 0x00);
+        cpu.regs().pc = 0;
+        cpu.step();
+        // low 7 bits wrap 0->1, bit 7 stays 1
+        REQUIRE(cpu.regs().r == 0x81);
+    }
+
+    SECTION("LD A,I (ED 57) sets P/V from IFF2") {
+        cpu.regs().i = 0x55;
+        cpu.regs().iff2 = true;
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x57);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x55);
+        REQUIRE(cpu.getFlagPV());
+
+        cpu.regs().iff2 = false;
+        bus_and_ram.ram->write(2, 0xED);
+        bus_and_ram.ram->write(3, 0x57);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE_FALSE(cpu.getFlagPV());
+    }
+
+    SECTION("LD A,R (ED 5F) sets P/V from IFF2") {
+        cpu.reset();
+        cpu.regs().iff2 = true;
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x5F);
+        cpu.regs().pc = 0;
+        cpu.step();
+        // R is incremented by the opcode fetch before being loaded into A.
+        REQUIRE(cpu.getA() == cpu.regs().r);
+        REQUIRE(cpu.getFlagPV());
+    }
+}
+

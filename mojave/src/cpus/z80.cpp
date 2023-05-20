@@ -7,19 +7,77 @@ void Z80::reset() {
     is_halted = false;
     prefix_dd_ = false;
     prefix_fd_ = false;
+    nmi_pending_ = false;
+    int_line_ = false;
+    int_data_ = 0;
     after_ei_ = false;
     wz_ = 0;
     updatePageTable();
 }
 
 unsigned Z80::step() {
+    // EI takes effect after the instruction following EI; the maskable interrupt
+    // check is inhibited for one step after EI executes.
+    bool int_inhibited = after_ei_;
+    after_ei_ = false;
+
+    // NMI: edge-triggered, non-maskable, highest priority.
+    if (nmi_pending_) {
+        nmi_pending_ = false;
+        is_halted = false; // any interrupt releases HALT
+        return serviceNmi();
+    }
+    // INT: level-triggered, sampled when IFF1 is set and not EI-inhibited.
+    if (!int_inhibited && int_line_ && regs_.iff1) {
+        is_halted = false;
+        return serviceInt();
+    }
+
     if (is_halted) return 4;
+
     uint8_t opcode = readByte(regs_.pc++);
+    bumpR();
     OpcodeHandler handler = z80::kDispatch[opcode];
     unsigned cycles = (this->*handler)();
     prefix_dd_ = false;
     prefix_fd_ = false;
     return cycles;
+}
+
+void Z80::bumpR() {
+    // Bit 7 is preserved; only the low 7 bits increment (M1 refresh counter).
+    regs_.r = (regs_.r & 0x80) | ((regs_.r + 1) & 0x7F);
+}
+
+unsigned Z80::serviceNmi() {
+    push16(regs_.pc);
+    regs_.iff2 = regs_.iff1; // save IFF1 so RETN can restore it
+    regs_.iff1 = false;      // disable maskable interrupts inside the NMI ISR
+    regs_.pc = 0x0066;
+    bumpR();
+    return 11;
+}
+
+unsigned Z80::serviceInt() {
+    bumpR();
+    if (regs_.im == 0) {
+        // The interrupting device drives an opcode byte on the data bus
+        // (commonly a single-byte RST). Execute it directly; IFF is disabled.
+        regs_.iff1 = regs_.iff2 = false;
+        return (this->*z80::kDispatch[int_data_])();
+    }
+    push16(regs_.pc);
+    regs_.iff1 = regs_.iff2 = false;
+    if (regs_.im == 1) {
+        regs_.pc = 0x0038;
+        return 13;
+    }
+    // IM 2: vector address = (I << 8) | data byte; read the ISR address there.
+    uint16_t vector = (static_cast<uint16_t>(regs_.i) << 8) | int_data_;
+    uint8_t lo = readByte(vector);
+    uint8_t hi = readByte(vector + 1);
+    regs_.pc = (hi << 8) | lo;
+    return 19;
 }
 
 unsigned Z80::opUnimplemented() {
