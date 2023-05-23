@@ -1654,3 +1654,240 @@ TEST_CASE("Z80 Phase 10: refresh register R and LD A,I/R flags", "[cpu][z80][fas
     }
 }
 
+
+TEST_CASE("Z80 Phase 9: IXH/IXL register halves (undocumented)", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("LD IXH,n (DD 26) and LD IXL,n (DD 2E)") {
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x26);
+        bus_and_ram.ram->write(2, 0xAB);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 11);
+        REQUIRE((cpu.regs().ix >> 8) == 0xAB);
+
+        bus_and_ram.ram->write(3, 0xDD);
+        bus_and_ram.ram->write(4, 0x2E);
+        bus_and_ram.ram->write(5, 0xCD);
+        cpu.regs().pc = 3;
+        cpu.step();
+        REQUIRE((cpu.regs().ix & 0xFF) == 0xCD);
+    }
+
+    SECTION("INC IXH (DD 24) sets flags, leaves IXL") {
+        cpu.regs().ix = 0x0FFF;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x24);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 8);
+        REQUIRE(cpu.regs().ix == 0x10FF);
+        REQUIRE(cpu.getFlagH());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("DEC IXL (DD 2D) sets flags") {
+        cpu.regs().ix = 0x0000;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x2D);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE((cpu.regs().ix & 0xFF) == 0xFF);
+        REQUIRE(cpu.getFlagZ() == false);
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("LD B,IXH (DD 44) and LD A,IXL (DD 7D)") {
+        cpu.regs().ix = 0x1234;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x44);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 8);
+        REQUIRE(cpu.getB() == 0x12);
+
+        bus_and_ram.ram->write(2, 0xDD);
+        bus_and_ram.ram->write(3, 0x7D);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x34);
+    }
+
+    SECTION("LD IXH,B (DD 60) and LD IXL,A (DD 6F)") {
+        cpu.regs().ix = 0x0000;
+        cpu.setB(0x55);
+        cpu.setA(0x77);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x60);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE((cpu.regs().ix >> 8) == 0x55);
+
+        bus_and_ram.ram->write(2, 0xDD);
+        bus_and_ram.ram->write(3, 0x6F);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE((cpu.regs().ix & 0xFF) == 0x77);
+    }
+
+    SECTION("IYH/IYL mirror via FD prefix") {
+        cpu.regs().iy = 0x0000;
+        bus_and_ram.ram->write(0, 0xFD);
+        bus_and_ram.ram->write(1, 0x26);
+        bus_and_ram.ram->write(2, 0x99);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE((cpu.regs().iy >> 8) == 0x99);
+    }
+}
+
+TEST_CASE("Z80 Phase 10: undocumented F3/F5 flag bits", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x4000);
+    cpu.setBus(bus_and_ram.bus.get());
+    // 0x28 has both bit 3 (0x08) and bit 5 (0x20) set, so a value/result of
+    // 0x28 must set both F3 and F5. 0x40 has neither bit set.
+
+    SECTION("ADD A,B copies F3/F5 from the result") {
+        cpu.setA(0x00);
+        cpu.setB(0x28);
+        bus_and_ram.ram->write(0, 0x80); // ADD A,B
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+
+    SECTION("CP n copies F3/F5 from the operand (not the result)") {
+        cpu.setA(0x68);                 // 0x68 - 0x28 = 0x40 (F3/F5 clear in result)
+        bus_and_ram.ram->write(0, 0xFE);
+        bus_and_ram.ram->write(1, 0x28); // CP 0x28
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getFlagF3());       // operand 0x28 has bit 3 set
+        REQUIRE(cpu.getFlagF5());       // operand 0x28 has bit 5 set
+    }
+
+    SECTION("INC B copies F3/F5 from the result") {
+        cpu.setB(0x27);                 // -> 0x28
+        bus_and_ram.ram->write(0, 0x04); // INC B
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getB() == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+
+    SECTION("DEC B copies F3/F5 from the result") {
+        cpu.setB(0x29);                 // -> 0x28
+        bus_and_ram.ram->write(0, 0x05); // DEC B
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getB() == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+
+    SECTION("CB SLA B copies F3/F5 from the result") {
+        cpu.setB(0x14);                 // SLA -> 0x28
+        bus_and_ram.ram->write(0, 0xCB);
+        bus_and_ram.ram->write(1, 0x20); // SLA B
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getB() == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+
+    SECTION("BIT n,r copies F3/F5 from the tested register") {
+        cpu.setB(0x28);
+        bus_and_ram.ram->write(0, 0xCB);
+        bus_and_ram.ram->write(1, 0x40); // BIT 0,B
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getFlagZ());        // bit 0 of 0x28 is 0
+        REQUIRE(cpu.getFlagF3());       // B bit 3 set
+        REQUIRE(cpu.getFlagF5());       // B bit 5 set
+    }
+
+    SECTION("LD A,I copies F3/F5 from I") {
+        cpu.regs().i = 0x28;
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0x57); // LD A,I
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+
+    SECTION("LDI copies F3/F5 from the transferred byte") {
+        cpu.regs().hl = 0x1000;
+        cpu.regs().de = 0x2000;
+        bus_and_ram.ram->write(0x1000, 0x28);
+        bus_and_ram.ram->write(0, 0xED);
+        bus_and_ram.ram->write(1, 0xA0); // LDI
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x2000) == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+
+    SECTION("RLCA copies F3/F5 from the rotated accumulator") {
+        cpu.setA(0x14);                 // RLCA -> 0x28
+        bus_and_ram.ram->write(0, 0x07); // RLCA
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+}
+
+TEST_CASE("Z80 Phase 10: MEMPTR drives BIT (HL)/(IX+d) flags", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x4000);
+    cpu.setBus(bus_and_ram.bus.get());
+    // Effective-address high byte 0x28 has bits 3 and 5 set; the loaded value
+    // 0xC7 has neither, proving F3/F5 come from the address (MEMPTR), not the byte.
+
+    SECTION("BIT n,(HL) takes F3/F5 from address high byte") {
+        cpu.regs().hl = 0x2800;                 // H = 0x28
+        bus_and_ram.ram->write(0x2800, 0xC7);   // value bits 3/5 clear
+        bus_and_ram.ram->write(0, 0xCB);
+        bus_and_ram.ram->write(1, 0x46);        // BIT 0,(HL)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getFlagF3());               // from H bit 3
+        REQUIRE(cpu.getFlagF5());               // from H bit 5
+        REQUIRE(cpu.wz() == 0x2800);
+    }
+
+    SECTION("BIT n,(IX+d) takes F3/F5 from effective address high byte") {
+        cpu.regs().ix = 0x2800;                 // (IX+0) high byte = 0x28
+        bus_and_ram.ram->write(0x2800, 0xC7);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0xCB);
+        bus_and_ram.ram->write(2, 0x00);        // d = 0
+        bus_and_ram.ram->write(3, 0x46);        // BIT 0,(IX+d)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+        REQUIRE(cpu.wz() == 0x2800);
+    }
+
+    SECTION("INC (HL) leaves F3/F5 from result (sanity, value 0x27 -> 0x28)") {
+        cpu.regs().hl = 0x0500;
+        bus_and_ram.ram->write(0x0500, 0x27);
+        bus_and_ram.ram->write(0, 0x34); // INC (HL)
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE(bus_and_ram.ram->read(0x0500) == 0x28);
+        REQUIRE(cpu.getFlagF3());
+        REQUIRE(cpu.getFlagF5());
+    }
+}
+

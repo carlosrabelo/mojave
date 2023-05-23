@@ -56,7 +56,7 @@ Complete this section before any Z80 machine preset.
 - [x] Unofficial ED bytes as 8-cycle NOP
 - [x] IX/IY: DD/FD prefix, indexed addressing, DDCB/FDCB
 - [x] Interrupts (IFF, NMI, INT modes 0/1/2, EI delay)
-- [ ] Undocumented: WZ/MEMPTR, IXH/IXL, F bits 3/5
+- [x] Undocumented: WZ/MEMPTR, IXH/IXL, F bits 3/5
 - [ ] Full coverage: every dispatch table entry bound to a handler
 
 ## MOS 6502 opcodes
