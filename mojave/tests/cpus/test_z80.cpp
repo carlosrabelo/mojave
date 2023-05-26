@@ -3,6 +3,8 @@
 #include "cpus/z80.hpp"
 #include "cpus/z80/dispatch.hpp"
 #include "helpers.hpp"
+#include "devices/shared/port_device.hpp"
+#include <unordered_map>
 
 TEST_CASE("Z80 reset clears all registers and halts", "[cpu][z80][fast]") {
     Z80 cpu;
@@ -369,7 +371,6 @@ TEST_CASE("Z80 Phase 3: Jumps and Branches", "[cpu][z80][fast]") {
     }
 }
 
-
 TEST_CASE("Z80 Phase 4: Register-to-register loads (40-7F) and HALT", "[cpu][z80][fast]") {
     Z80 cpu;
     auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
@@ -421,7 +422,6 @@ TEST_CASE("Z80 Phase 4: Register-to-register loads (40-7F) and HALT", "[cpu][z80
         REQUIRE(cpu.regs().pc == 1);
     }
 }
-
 
 TEST_CASE("Z80 Phase 5: 8-bit ALU operations", "[cpu][z80][fast]") {
     Z80 cpu;
@@ -516,7 +516,6 @@ TEST_CASE("Z80 Phase 5: 8-bit ALU operations", "[cpu][z80][fast]") {
         REQUIRE_FALSE(cpu.getFlagC());
     }
 }
-
 
 TEST_CASE("Z80 Phase 6: Control Flow, Stack, I/O and Prefixes", "[cpu][z80][fast]") {
     Z80 cpu;
@@ -667,7 +666,6 @@ TEST_CASE("Z80 Phase 6: Control Flow, Stack, I/O and Prefixes", "[cpu][z80][fast
     }
 }
 
-
 TEST_CASE("Z80 Phase 7: CB Prefix - Shifts, Rotates, BIT, SET, RES", "[cpu][z80][fast]") {
     Z80 cpu;
     auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
@@ -770,7 +768,6 @@ TEST_CASE("Z80 Phase 7: CB Prefix - Shifts, Rotates, BIT, SET, RES", "[cpu][z80]
         REQUIRE(cpu.getB() == 0x00);
     }
 }
-
 
 TEST_CASE("Z80 Phase 8: ED Prefix - 16-bit ALU, Block operations, I/O, Interrupt modes", "[cpu][z80][fast]") {
     Z80 cpu;
@@ -969,7 +966,6 @@ TEST_CASE("Z80 Phase 8: ED Prefix - 16-bit ALU, Block operations, I/O, Interrupt
         REQUIRE(bus_and_ram.ram->read(0x0500) == 0x2A);
     }
 
-
     SECTION("Unofficial ED opcodes are 8-cycle NOPs") {
         const uint8_t unofficial[] = {0x00, 0x76, 0x77, 0x7E, 0x7F, 0xFF};
         uint16_t pc = 0;
@@ -985,7 +981,6 @@ TEST_CASE("Z80 Phase 8: ED Prefix - 16-bit ALU, Block operations, I/O, Interrupt
         }
     }
 }
-
 
 TEST_CASE("Z80 Phase 9: IX/IY 16-bit loads and arithmetic (DD/FD)", "[cpu][z80][fast]") {
     Z80 cpu;
@@ -1079,6 +1074,92 @@ TEST_CASE("Z80 Phase 9: IX/IY 16-bit loads and arithmetic (DD/FD)", "[cpu][z80][
         cpu.regs().pc = 4;
         cpu.step();
         REQUIRE(cpu.regs().ix == 0xBEEF);
+    }
+}
+
+TEST_CASE("Z80 Phase 9: IXH/IXL register halves (undocumented)", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("LD IXH,n (DD 26) and LD IXL,n (DD 2E)") {
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x26);
+        bus_and_ram.ram->write(2, 0xAB);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 11);
+        REQUIRE((cpu.regs().ix >> 8) == 0xAB);
+
+        bus_and_ram.ram->write(3, 0xDD);
+        bus_and_ram.ram->write(4, 0x2E);
+        bus_and_ram.ram->write(5, 0xCD);
+        cpu.regs().pc = 3;
+        cpu.step();
+        REQUIRE((cpu.regs().ix & 0xFF) == 0xCD);
+    }
+
+    SECTION("INC IXH (DD 24) sets flags, leaves IXL") {
+        cpu.regs().ix = 0x0FFF;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x24);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 8);
+        REQUIRE(cpu.regs().ix == 0x10FF);
+        REQUIRE(cpu.getFlagH());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("DEC IXL (DD 2D) sets flags") {
+        cpu.regs().ix = 0x0000;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x2D);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE((cpu.regs().ix & 0xFF) == 0xFF);
+        REQUIRE(cpu.getFlagZ() == false);
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("LD B,IXH (DD 44) and LD A,IXL (DD 7D)") {
+        cpu.regs().ix = 0x1234;
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x44);
+        cpu.regs().pc = 0;
+        REQUIRE(cpu.step() == 8);
+        REQUIRE(cpu.getB() == 0x12);
+
+        bus_and_ram.ram->write(2, 0xDD);
+        bus_and_ram.ram->write(3, 0x7D);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE(cpu.getA() == 0x34);
+    }
+
+    SECTION("LD IXH,B (DD 60) and LD IXL,A (DD 6F)") {
+        cpu.regs().ix = 0x0000;
+        cpu.setB(0x55);
+        cpu.setA(0x77);
+        bus_and_ram.ram->write(0, 0xDD);
+        bus_and_ram.ram->write(1, 0x60);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE((cpu.regs().ix >> 8) == 0x55);
+
+        bus_and_ram.ram->write(2, 0xDD);
+        bus_and_ram.ram->write(3, 0x6F);
+        cpu.regs().pc = 2;
+        cpu.step();
+        REQUIRE((cpu.regs().ix & 0xFF) == 0x77);
+    }
+
+    SECTION("IYH/IYL mirror via FD prefix") {
+        cpu.regs().iy = 0x0000;
+        bus_and_ram.ram->write(0, 0xFD);
+        bus_and_ram.ram->write(1, 0x26);
+        bus_and_ram.ram->write(2, 0x99);
+        cpu.regs().pc = 0;
+        cpu.step();
+        REQUIRE((cpu.regs().iy >> 8) == 0x99);
     }
 }
 
@@ -1419,7 +1500,6 @@ TEST_CASE("Z80 Phase 9: DD/FD prefix fallthrough and nesting", "[cpu][z80][fast]
     }
 }
 
-
 TEST_CASE("Z80 Phase 10: NMI non-maskable interrupt", "[cpu][z80][fast]") {
     Z80 cpu;
     auto bus_and_ram = createBusWithRam(0x0000, 0x2000);
@@ -1654,93 +1734,6 @@ TEST_CASE("Z80 Phase 10: refresh register R and LD A,I/R flags", "[cpu][z80][fas
     }
 }
 
-
-TEST_CASE("Z80 Phase 9: IXH/IXL register halves (undocumented)", "[cpu][z80][fast]") {
-    Z80 cpu;
-    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
-    cpu.setBus(bus_and_ram.bus.get());
-
-    SECTION("LD IXH,n (DD 26) and LD IXL,n (DD 2E)") {
-        bus_and_ram.ram->write(0, 0xDD);
-        bus_and_ram.ram->write(1, 0x26);
-        bus_and_ram.ram->write(2, 0xAB);
-        cpu.regs().pc = 0;
-        REQUIRE(cpu.step() == 11);
-        REQUIRE((cpu.regs().ix >> 8) == 0xAB);
-
-        bus_and_ram.ram->write(3, 0xDD);
-        bus_and_ram.ram->write(4, 0x2E);
-        bus_and_ram.ram->write(5, 0xCD);
-        cpu.regs().pc = 3;
-        cpu.step();
-        REQUIRE((cpu.regs().ix & 0xFF) == 0xCD);
-    }
-
-    SECTION("INC IXH (DD 24) sets flags, leaves IXL") {
-        cpu.regs().ix = 0x0FFF;
-        bus_and_ram.ram->write(0, 0xDD);
-        bus_and_ram.ram->write(1, 0x24);
-        cpu.regs().pc = 0;
-        REQUIRE(cpu.step() == 8);
-        REQUIRE(cpu.regs().ix == 0x10FF);
-        REQUIRE(cpu.getFlagH());
-        REQUIRE_FALSE(cpu.getFlagN());
-    }
-
-    SECTION("DEC IXL (DD 2D) sets flags") {
-        cpu.regs().ix = 0x0000;
-        bus_and_ram.ram->write(0, 0xDD);
-        bus_and_ram.ram->write(1, 0x2D);
-        cpu.regs().pc = 0;
-        cpu.step();
-        REQUIRE((cpu.regs().ix & 0xFF) == 0xFF);
-        REQUIRE(cpu.getFlagZ() == false);
-        REQUIRE(cpu.getFlagN());
-    }
-
-    SECTION("LD B,IXH (DD 44) and LD A,IXL (DD 7D)") {
-        cpu.regs().ix = 0x1234;
-        bus_and_ram.ram->write(0, 0xDD);
-        bus_and_ram.ram->write(1, 0x44);
-        cpu.regs().pc = 0;
-        REQUIRE(cpu.step() == 8);
-        REQUIRE(cpu.getB() == 0x12);
-
-        bus_and_ram.ram->write(2, 0xDD);
-        bus_and_ram.ram->write(3, 0x7D);
-        cpu.regs().pc = 2;
-        cpu.step();
-        REQUIRE(cpu.getA() == 0x34);
-    }
-
-    SECTION("LD IXH,B (DD 60) and LD IXL,A (DD 6F)") {
-        cpu.regs().ix = 0x0000;
-        cpu.setB(0x55);
-        cpu.setA(0x77);
-        bus_and_ram.ram->write(0, 0xDD);
-        bus_and_ram.ram->write(1, 0x60);
-        cpu.regs().pc = 0;
-        cpu.step();
-        REQUIRE((cpu.regs().ix >> 8) == 0x55);
-
-        bus_and_ram.ram->write(2, 0xDD);
-        bus_and_ram.ram->write(3, 0x6F);
-        cpu.regs().pc = 2;
-        cpu.step();
-        REQUIRE((cpu.regs().ix & 0xFF) == 0x77);
-    }
-
-    SECTION("IYH/IYL mirror via FD prefix") {
-        cpu.regs().iy = 0x0000;
-        bus_and_ram.ram->write(0, 0xFD);
-        bus_and_ram.ram->write(1, 0x26);
-        bus_and_ram.ram->write(2, 0x99);
-        cpu.regs().pc = 0;
-        cpu.step();
-        REQUIRE((cpu.regs().iy >> 8) == 0x99);
-    }
-}
-
 TEST_CASE("Z80 Phase 10: undocumented F3/F5 flag bits", "[cpu][z80][fast]") {
     Z80 cpu;
     auto bus_and_ram = createBusWithRam(0x0000, 0x4000);
@@ -1890,4 +1883,95 @@ TEST_CASE("Z80 Phase 10: MEMPTR drives BIT (HL)/(IX+d) flags", "[cpu][z80][fast]
         REQUIRE(cpu.getFlagF5());
     }
 }
+
+TEST_CASE("Z80 Phase 11: Full opcode coverage - every dispatch entry bound to a handler", "[cpu][z80][fast]") {
+    Z80 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0xFFFF);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("All dispatch tables have all 256 entries non-null") {
+        for (int i = 0; i < 256; ++i) {
+            REQUIRE(z80::kDispatch[i] != nullptr);
+            REQUIRE(z80::kDispatchCB[i] != nullptr);
+            REQUIRE(z80::kDispatchED[i] != nullptr);
+        }
+    }
+
+    auto setup = [&]() {
+        cpu.reset();
+        cpu.regs().pc = 0x0100;
+        cpu.regs().sp = 0xFF00;
+        cpu.regs().hl = cpu.regs().de = cpu.regs().bc = 0x0200;
+        cpu.regs().ix = cpu.regs().iy = 0x0200;
+    };
+
+    SECTION("All 256 base opcodes execute without crash") {
+        for (int op = 0; op < 256; ++op) {
+            setup();
+            bus_and_ram.ram->write(0x0100, static_cast<uint8_t>(op));
+            REQUIRE(cpu.step() > 0);
+        }
+    }
+
+    SECTION("All 256 CB prefix opcodes execute without crash") {
+        for (int op = 0; op < 256; ++op) {
+            setup();
+            bus_and_ram.ram->write(0x0100, 0xCB);
+            bus_and_ram.ram->write(0x0101, static_cast<uint8_t>(op));
+            REQUIRE(cpu.step() > 0);
+        }
+    }
+
+    SECTION("All 256 ED prefix opcodes execute without crash") {
+        for (int op = 0; op < 256; ++op) {
+            setup();
+            bus_and_ram.ram->write(0x0100, 0xED);
+            bus_and_ram.ram->write(0x0101, static_cast<uint8_t>(op));
+            REQUIRE(cpu.step() > 0);
+        }
+    }
+
+    SECTION("All 256 DD prefix variations execute without crash") {
+        for (int op = 0; op < 256; ++op) {
+            setup();
+            bus_and_ram.ram->write(0x0100, 0xDD);
+            bus_and_ram.ram->write(0x0101, static_cast<uint8_t>(op));
+            REQUIRE(cpu.step() > 0);
+        }
+    }
+
+    SECTION("All 256 FD prefix variations execute without crash") {
+        for (int op = 0; op < 256; ++op) {
+            setup();
+            bus_and_ram.ram->write(0x0100, 0xFD);
+            bus_and_ram.ram->write(0x0101, static_cast<uint8_t>(op));
+            REQUIRE(cpu.step() > 0);
+        }
+    }
+
+    SECTION("All 256 DDCB compound opcodes execute without crash") {
+        for (int op = 0; op < 256; ++op) {
+            setup();
+            bus_and_ram.ram->write(0x0100, 0xDD);
+            bus_and_ram.ram->write(0x0101, 0xCB);
+            bus_and_ram.ram->write(0x0102, 0x00);
+            bus_and_ram.ram->write(0x0103, static_cast<uint8_t>(op));
+            REQUIRE(cpu.step() > 0);
+        }
+    }
+
+    SECTION("All 256 FDCB compound opcodes execute without crash") {
+        for (int op = 0; op < 256; ++op) {
+            setup();
+            bus_and_ram.ram->write(0x0100, 0xFD);
+            bus_and_ram.ram->write(0x0101, 0xCB);
+            bus_and_ram.ram->write(0x0102, 0x00);
+            bus_and_ram.ram->write(0x0103, static_cast<uint8_t>(op));
+            REQUIRE(cpu.step() > 0);
+        }
+    }
+}
+
+
+
 

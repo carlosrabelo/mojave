@@ -21,10 +21,6 @@ public:
     Z80() = default;
 
     void reset() override;
-
-    uint16_t wz() const { return wz_; }
-    void setWz(uint16_t v) { wz_ = v; }
-
     unsigned step() override;
     bool halted() const override { return is_halted; }
     RegisterSnapshot registers() const override;
@@ -32,6 +28,27 @@ public:
     Z80Registers& regs() { return regs_; }
     const Z80Registers& regs() const { return regs_; }
 
+    using OpcodeHandler = z80::OpcodeHandler;
+
+    // Helper functions for memory access (optimized fast-path)
+    inline uint8_t readByte(uint16_t addr) const {
+        uint8_t* page_ptr = read_pages_[addr >> 10];
+        if (page_ptr) [[likely]] {
+            return page_ptr[addr & 0x03FF];
+        }
+        return bus_ ? bus_->read(addr) : 0;
+    }
+
+    inline void writeByte(uint16_t addr, uint8_t val) {
+        uint8_t* page_ptr = write_pages_[addr >> 10];
+        if (page_ptr) [[likely]] {
+            page_ptr[addr & 0x03FF] = val;
+            return;
+        }
+        if (bus_) {
+            bus_->write(addr, val);
+        }
+    }
 
     // Register accessors (high/low parts)
     uint8_t getA() const { return regs_.af >> 8; }
@@ -54,12 +71,14 @@ public:
     uint8_t getL() const { return regs_.hl & 0xFF; }
     void setL(uint8_t val) { regs_.hl = (regs_.hl & 0xFF00) | val; }
 
+    // Flag helpers
     bool getFlagS() const { return (getF() & 0x80) != 0; }
     bool getFlagZ() const { return (getF() & 0x40) != 0; }
     bool getFlagH() const { return (getF() & 0x10) != 0; }
     bool getFlagPV() const { return (getF() & 0x04) != 0; }
     bool getFlagN() const { return (getF() & 0x02) != 0; }
     bool getFlagC() const { return (getF() & 0x01) != 0; }
+    // Undocumented flags F5 (bit 5) and F3 (bit 3).
     bool getFlagF5() const { return (getF() & 0x20) != 0; }
     bool getFlagF3() const { return (getF() & 0x08) != 0; }
 
@@ -71,11 +90,17 @@ public:
     void setFlagC(bool val) { setF(val ? (getF() | 0x01) : (getF() & ~0x01)); }
     void setFlagF5(bool val) { setF(val ? (getF() | 0x20) : (getF() & ~0x20)); }
     void setFlagF3(bool val) { setF(val ? (getF() | 0x08) : (getF() & ~0x08)); }
+    // Copy bits 3 and 5 of val into F3/F5 (common to most result-producing ops).
     void setF35(uint8_t val) {
         setFlagF3((val & 0x08) != 0);
         setFlagF5((val & 0x20) != 0);
     }
 
+    // Logic/arithmetic helpers
+    bool parity(uint8_t val) const;
+    void daa();
+
+    // Fetching helpers
     uint8_t fetchByte() { return readByte(regs_.pc++); }
     uint16_t fetchWord() {
         uint8_t low = fetchByte();
@@ -83,15 +108,40 @@ public:
         return (high << 8) | low;
     }
 
-    bool parity(uint8_t val) const;
-    void daa();
-    void add16(uint16_t& dest, uint16_t src);
-    uint8_t inc8(uint8_t v);
-    uint8_t dec8(uint8_t v);
+    // Opcode handlers
+    unsigned opUnimplemented();
 
     uint8_t getReg(int reg_index);
     void setReg(int reg_index, uint8_t val);
+    void add16(uint16_t& dest, uint16_t src);
+    uint8_t inc8(uint8_t v);   // 8-bit INC with full flag set (incl. F3/F5)
+    uint8_t dec8(uint8_t v);   // 8-bit DEC with full flag set (incl. F3/F5)
 
+    // Internal WZ/MEMPTR register (observable via F3/F5 of BIT n,(HL)/(IX+d)).
+    uint16_t wz() const { return wz_; }
+    void setWz(uint16_t v) { wz_ = v; }
+
+    // Phase 3 Opcodes 00-3F
+    unsigned op00(), op01(), op02(), op03(), op04(), op05(), op06(), op07();
+    unsigned op08(), op09(), op0A(), op0B(), op0C(), op0D(), op0E(), op0F();
+    unsigned op10(), op11(), op12(), op13(), op14(), op15(), op16(), op17();
+    unsigned op18(), op19(), op1A(), op1B(), op1C(), op1D(), op1E(), op1F();
+    unsigned op20(), op21(), op22(), op23(), op24(), op25(), op26(), op27();
+    unsigned op28(), op29(), op2A(), op2B(), op2C(), op2D(), op2E(), op2F();
+    unsigned op30(), op31(), op32(), op33(), op34(), op35(), op36(), op37();
+    unsigned op38(), op39(), op3A(), op3B(), op3C(), op3D(), op3E(), op3F();
+
+    // Phase 4 Opcodes 40-7F
+    unsigned op40(), op41(), op42(), op43(), op44(), op45(), op46(), op47();
+    unsigned op48(), op49(), op4A(), op4B(), op4C(), op4D(), op4E(), op4F();
+    unsigned op50(), op51(), op52(), op53(), op54(), op55(), op56(), op57();
+    unsigned op58(), op59(), op5A(), op5B(), op5C(), op5D(), op5E(), op5F();
+    unsigned op60(), op61(), op62(), op63(), op64(), op65(), op66(), op67();
+    unsigned op68(), op69(), op6A(), op6B(), op6C(), op6D(), op6E(), op6F();
+    unsigned op70(), op71(), op72(), op73(), op74(), op75(), op76(), op77();
+    unsigned op78(), op79(), op7A(), op7B(), op7C(), op7D(), op7E(), op7F();
+
+    // ALU helpers
     void aluADD(uint8_t val);
     void aluADC(uint8_t val);
     void aluSUB(uint8_t val);
@@ -101,13 +151,48 @@ public:
     void aluOR(uint8_t val);
     void aluCP(uint8_t val);
 
+    // Stack and control flow helpers
     void push16(uint16_t val);
     uint16_t pop16();
     bool evalCondition(int cond) const;
 
-    unsigned executeCB(uint8_t op);
-    uint8_t cbShift(int b, uint8_t val);
+    // Phase 5 Opcodes 80-BF
+    unsigned op80(), op81(), op82(), op83(), op84(), op85(), op86(), op87();
+    unsigned op88(), op89(), op8A(), op8B(), op8C(), op8D(), op8E(), op8F();
+    unsigned op90(), op91(), op92(), op93(), op94(), op95(), op96(), op97();
+    unsigned op98(), op99(), op9A(), op9B(), op9C(), op9D(), op9E(), op9F();
+    unsigned opA0(), opA1(), opA2(), opA3(), opA4(), opA5(), opA6(), opA7();
+    unsigned opA8(), opA9(), opAA(), opAB(), opAC(), opAD(), opAE(), opAF();
+    unsigned opB0(), opB1(), opB2(), opB3(), opB4(), opB5(), opB6(), opB7();
+    unsigned opB8(), opB9(), opBA(), opBB(), opBC(), opBD(), opBE(), opBF();
 
+    // Phase 6 Opcodes C0-FF
+    unsigned opC0(), opC1(), opC2(), opC3(), opC4(), opC5(), opC6(), opC7();
+    unsigned opC8(), opC9(), opCA(), opCB_prefix(), opCC(), opCD(), opCE(), opCF();
+    unsigned opD0(), opD1(), opD2(), opD3(), opD4(), opD5(), opD6(), opD7();
+    unsigned opD8(), opD9(), opDA(), opDB(), opDC(), opDD_prefix(), opDE(), opDF();
+    unsigned opE0(), opE1(), opE2(), opE3(), opE4(), opE5(), opE6(), opE7();
+    unsigned opE8(), opE9(), opEA(), opEB(), opEC(), opED_prefix(), opEE(), opEF();
+    unsigned opF0(), opF1(), opF2(), opF3(), opF4(), opF5(), opF6(), opF7();
+    unsigned opF8(), opF9(), opFA(), opFB(), opFC(), opFD_prefix(), opFE(), opFF();
+
+    // Phase 7 CB prefix handlers
+    unsigned executeCB(uint8_t op);
+
+#define DECL_CB_ROW(high) \
+    unsigned opCB##high##0(), opCB##high##1(), opCB##high##2(), opCB##high##3(), \
+             opCB##high##4(), opCB##high##5(), opCB##high##6(), opCB##high##7(), \
+             opCB##high##8(), opCB##high##9(), opCB##high##A(), opCB##high##B(), \
+             opCB##high##C(), opCB##high##D(), opCB##high##E(), opCB##high##F();
+
+    DECL_CB_ROW(0) DECL_CB_ROW(1) DECL_CB_ROW(2) DECL_CB_ROW(3)
+    DECL_CB_ROW(4) DECL_CB_ROW(5) DECL_CB_ROW(6) DECL_CB_ROW(7)
+    DECL_CB_ROW(8) DECL_CB_ROW(9) DECL_CB_ROW(A) DECL_CB_ROW(B)
+    DECL_CB_ROW(C) DECL_CB_ROW(D) DECL_CB_ROW(E) DECL_CB_ROW(F)
+
+#undef DECL_CB_ROW
+
+    // Phase 8 ED prefix helpers
     void edSBC_HL(uint16_t val);
     void edADC_HL(uint16_t val);
     void edNEG();
@@ -123,24 +208,6 @@ public:
 
     unsigned executeED(uint8_t op);
 
-    uint16_t& indexReg();
-    int8_t fetchDisp() { return static_cast<int8_t>(fetchByte()); }
-    void incIndexHalf(int idx);
-    void decIndexHalf(int idx);
-    void incIndexedMem();
-    void decIndexedMem();
-    unsigned executeDD(uint8_t op);
-    unsigned executeDDCB();
-
-    void requestNmi() { nmi_pending_ = true; }
-    void setIntLine(bool level) { int_line_ = level; }
-    void setIntData(uint8_t data) { int_data_ = data; }
-    void bumpR();
-    unsigned serviceNmi();
-    unsigned serviceInt();
-
-
-
 #define DECL_ED_ROW(high) \
     unsigned opED##high##0(), opED##high##1(), opED##high##2(), opED##high##3(), \
              opED##high##4(), opED##high##5(), opED##high##6(), opED##high##7(), \
@@ -154,81 +221,24 @@ public:
 
 #undef DECL_ED_ROW
 
+    // Phase 9 DD/FD prefix helpers (IX/IY)
+    uint16_t& indexReg();
+    int8_t fetchDisp() { return static_cast<int8_t>(fetchByte()); }
+    void incIndexHalf(int idx);
+    void decIndexHalf(int idx);
+    void incIndexedMem();
+    void decIndexedMem();
+    uint8_t cbShift(int b, uint8_t val);
+    unsigned executeDD(uint8_t op);
+    unsigned executeDDCB();
 
-#define DECL_CB_ROW(high) \
-    unsigned opCB##high##0(), opCB##high##1(), opCB##high##2(), opCB##high##3(), \
-             opCB##high##4(), opCB##high##5(), opCB##high##6(), opCB##high##7(), \
-             opCB##high##8(), opCB##high##9(), opCB##high##A(), opCB##high##B(), \
-             opCB##high##C(), opCB##high##D(), opCB##high##E(), opCB##high##F();
-
-    DECL_CB_ROW(0) DECL_CB_ROW(1) DECL_CB_ROW(2) DECL_CB_ROW(3)
-    DECL_CB_ROW(4) DECL_CB_ROW(5) DECL_CB_ROW(6) DECL_CB_ROW(7)
-    DECL_CB_ROW(8) DECL_CB_ROW(9) DECL_CB_ROW(A) DECL_CB_ROW(B)
-    DECL_CB_ROW(C) DECL_CB_ROW(D) DECL_CB_ROW(E) DECL_CB_ROW(F)
-
-#undef DECL_CB_ROW
-
-
-
-    inline uint8_t readByte(uint16_t addr) const {
-        uint8_t* page_ptr = read_pages_[addr >> 10];
-        if (page_ptr) [[likely]] {
-            return page_ptr[addr & 0x03FF];
-        }
-        return bus_ ? bus_->read(addr) : 0;
-    }
-
-    inline void writeByte(uint16_t addr, uint8_t val) {
-        uint8_t* page_ptr = write_pages_[addr >> 10];
-        if (page_ptr) [[likely]] {
-            page_ptr[addr & 0x03FF] = val;
-            return;
-        }
-        if (bus_) {
-            bus_->write(addr, val);
-        }
-    }
-
-
-    using OpcodeHandler = z80::OpcodeHandler;
-
-    unsigned opUnimplemented();
-
-    unsigned op00(), op01(), op02(), op03(), op04(), op05(), op06(), op07();
-    unsigned op08(), op09(), op0A(), op0B(), op0C(), op0D(), op0E(), op0F();
-    unsigned op10(), op11(), op12(), op13(), op14(), op15(), op16(), op17();
-    unsigned op18(), op19(), op1A(), op1B(), op1C(), op1D(), op1E(), op1F();
-    unsigned op20(), op21(), op22(), op23(), op24(), op25(), op26(), op27();
-    unsigned op28(), op29(), op2A(), op2B(), op2C(), op2D(), op2E(), op2F();
-    unsigned op30(), op31(), op32(), op33(), op34(), op35(), op36(), op37();
-    unsigned op38(), op39(), op3A(), op3B(), op3C(), op3D(), op3E(), op3F();
-
-    unsigned op40(), op41(), op42(), op43(), op44(), op45(), op46(), op47();
-    unsigned op48(), op49(), op4A(), op4B(), op4C(), op4D(), op4E(), op4F();
-    unsigned op50(), op51(), op52(), op53(), op54(), op55(), op56(), op57();
-    unsigned op58(), op59(), op5A(), op5B(), op5C(), op5D(), op5E(), op5F();
-    unsigned op60(), op61(), op62(), op63(), op64(), op65(), op66(), op67();
-    unsigned op68(), op69(), op6A(), op6B(), op6C(), op6D(), op6E(), op6F();
-    unsigned op70(), op71(), op72(), op73(), op74(), op75(), op76(), op77();
-    unsigned op78(), op79(), op7A(), op7B(), op7C(), op7D(), op7E(), op7F();
-
-    unsigned op80(), op81(), op82(), op83(), op84(), op85(), op86(), op87();
-    unsigned op88(), op89(), op8A(), op8B(), op8C(), op8D(), op8E(), op8F();
-    unsigned op90(), op91(), op92(), op93(), op94(), op95(), op96(), op97();
-    unsigned op98(), op99(), op9A(), op9B(), op9C(), op9D(), op9E(), op9F();
-    unsigned opA0(), opA1(), opA2(), opA3(), opA4(), opA5(), opA6(), opA7();
-    unsigned opA8(), opA9(), opAA(), opAB(), opAC(), opAD(), opAE(), opAF();
-    unsigned opB0(), opB1(), opB2(), opB3(), opB4(), opB5(), opB6(), opB7();
-    unsigned opB8(), opB9(), opBA(), opBB(), opBC(), opBD(), opBE(), opBF();
-
-    unsigned opC0(), opC1(), opC2(), opC3(), opC4(), opC5(), opC6(), opC7();
-    unsigned opC8(), opC9(), opCA(), opCB_prefix(), opCC(), opCD(), opCE(), opCF();
-    unsigned opD0(), opD1(), opD2(), opD3(), opD4(), opD5(), opD6(), opD7();
-    unsigned opD8(), opD9(), opDA(), opDB(), opDC(), opDD_prefix(), opDE(), opDF();
-    unsigned opE0(), opE1(), opE2(), opE3(), opE4(), opE5(), opE6(), opE7();
-    unsigned opE8(), opE9(), opEA(), opEB(), opEC(), opED_prefix(), opEE(), opEF();
-    unsigned opF0(), opF1(), opF2(), opF3(), opF4(), opF5(), opF6(), opF7();
-    unsigned opF8(), opF9(), opFA(), opFB(), opFC(), opFD_prefix(), opFE(), opFF();
+    // Phase 10 Interrupts (NMI, INT modes 0/1/2, EI delay)
+    void requestNmi() { nmi_pending_ = true; }        // edge: latch a pending NMI
+    void setIntLine(bool level) { int_line_ = level; } // level-triggered maskable INT
+    void setIntData(uint8_t data) { int_data_ = data; } // IM0 opcode / IM2 vector byte
+    void bumpR();
+    unsigned serviceNmi();
+    unsigned serviceInt();
 
     void updatePageTable() override;
 
@@ -237,11 +247,12 @@ private:
     bool is_halted = false;
     bool prefix_dd_ = false;
     bool prefix_fd_ = false;
-    bool nmi_pending_ = false;
-    bool int_line_ = false;
-    uint8_t int_data_ = 0;
-    bool after_ei_ = false;
-    uint16_t wz_ = 0;
+    bool nmi_pending_ = false;   // latched NMI request (edge)
+    bool int_line_ = false;      // current INT pin level
+    uint8_t int_data_ = 0;       // data bus byte supplied during INTA
+    bool after_ei_ = false;      // EI takes effect after the next instruction
+    uint16_t wz_ = 0;            // WZ / MEMPTR internal register
+
     uint8_t* read_pages_[64] = {};
     uint8_t* write_pages_[64] = {};
 };

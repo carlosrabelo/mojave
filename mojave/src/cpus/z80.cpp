@@ -1,4 +1,5 @@
 #include "cpus/z80.hpp"
+#include "bus/bus.hpp"
 #include "cpus/z80/dispatch.hpp"
 #include <cstdio>
 
@@ -9,10 +10,9 @@ void Z80::reset() {
     prefix_fd_ = false;
     nmi_pending_ = false;
     int_line_ = false;
-    int_data_ = 0;
     after_ei_ = false;
+    int_data_ = 0;
     wz_ = 0;
-    updatePageTable();
 }
 
 unsigned Z80::step() {
@@ -80,13 +80,6 @@ unsigned Z80::serviceInt() {
     return 19;
 }
 
-unsigned Z80::opUnimplemented() {
-    uint16_t pc = regs_.pc - 1;
-    uint8_t opcode = readByte(pc);
-    std::fprintf(stderr, "Unimplemented Z80 opcode 0x%02X at PC=0x%04X\n", opcode, pc);
-    return 4;
-}
-
 void Z80::updatePageTable() {
     for (int p = 0; p < 64; ++p) {
         uint16_t start_addr = p * 1024;
@@ -112,23 +105,52 @@ void Z80::updatePageTable() {
     }
 }
 
-RegisterSnapshot Z80::registers() const {
-    RegisterSnapshot snap;
-    snap.entries.push_back(RegisterEntry{"AF", regs_.af});
-    snap.entries.push_back(RegisterEntry{"BC", regs_.bc});
-    snap.entries.push_back(RegisterEntry{"DE", regs_.de});
-    snap.entries.push_back(RegisterEntry{"HL", regs_.hl});
-    snap.entries.push_back(RegisterEntry{"AF'", regs_.af_});
-    snap.entries.push_back(RegisterEntry{"BC'", regs_.bc_});
-    snap.entries.push_back(RegisterEntry{"DE'", regs_.de_});
-    snap.entries.push_back(RegisterEntry{"HL'", regs_.hl_});
-    snap.entries.push_back(RegisterEntry{"IX", regs_.ix});
-    snap.entries.push_back(RegisterEntry{"IY", regs_.iy});
-    snap.entries.push_back(RegisterEntry{"SP", regs_.sp});
-    snap.entries.push_back(RegisterEntry{"PC", regs_.pc});
-    snap.entries.push_back(RegisterEntry{"I", regs_.i});
-    snap.entries.push_back(RegisterEntry{"R", regs_.r});
-    return snap;
+bool Z80::parity(uint8_t val) const {
+    unsigned count = 0;
+    for (int i = 0; i < 8; ++i) {
+        if ((val >> i) & 1) count++;
+    }
+    return (count % 2) == 0;
+}
+
+uint8_t Z80::cbShift(int b, uint8_t val) {
+    uint8_t res = 0;
+    bool carry = getFlagC();
+    switch (b) {
+        case 0: // RLC
+            setFlagC((val & 0x80) != 0);
+            res = (val << 1) | (val >> 7);
+            break;
+        case 1: // RRC
+            setFlagC((val & 1) != 0);
+            res = (val >> 1) | (val << 7);
+            break;
+        case 2: // RL
+            setFlagC((val & 0x80) != 0);
+            res = (val << 1) | (carry ? 1 : 0);
+            break;
+        case 3: // RR
+            setFlagC((val & 1) != 0);
+            res = (val >> 1) | (carry ? 0x80 : 0);
+            break;
+        case 4: // SLA
+            setFlagC((val & 0x80) != 0);
+            res = val << 1;
+            break;
+        case 5: // SRA
+            setFlagC((val & 1) != 0);
+            res = (val & 0x80) | (val >> 1);
+            break;
+        case 6: // SLL
+            setFlagC((val & 0x80) != 0);
+            res = (val << 1) | 1;
+            break;
+        case 7: // SRL
+            setFlagC((val & 1) != 0);
+            res = val >> 1;
+            break;
+    }
+    return res;
 }
 
 void Z80::daa() {
@@ -174,44 +196,11 @@ void Z80::daa() {
     setF35(new_a);
 }
 
-bool Z80::parity(uint8_t val) const {
-    unsigned count = 0;
-    for (int i = 0; i < 8; ++i) {
-        if ((val >> i) & 1) count++;
-    }
-    return (count % 2) == 0;
-}
-
-void Z80::add16(uint16_t& dest, uint16_t src) {
-    uint32_t val1 = dest;
-    uint32_t val2 = src;
-    uint32_t res = val1 + val2;
-    dest = static_cast<uint16_t>(res);
-    setFlagC(res > 0xFFFF);
-    setFlagH(((val1 & 0x0FFF) + (val2 & 0x0FFF)) > 0x0FFF);
-    setFlagN(false);
-}
-
-uint8_t Z80::inc8(uint8_t v) {
-    uint8_t res = v + 1;
-    setFlagS((res & 0x80) != 0);
-    setFlagZ(res == 0);
-    setFlagH((v & 0x0F) == 0x0F);
-    setFlagPV(v == 0x7F);
-    setFlagN(false);
-    setF35(res);
-    return res;
-}
-
-uint8_t Z80::dec8(uint8_t v) {
-    uint8_t res = v - 1;
-    setFlagS((res & 0x80) != 0);
-    setFlagZ(res == 0);
-    setFlagH((v & 0x0F) == 0x00);
-    setFlagPV(v == 0x80);
-    setFlagN(true);
-    setF35(res);
-    return res;
+unsigned Z80::opUnimplemented() {
+    uint16_t pc = regs_.pc - 1;
+    uint8_t opcode = readByte(pc);
+    std::fprintf(stderr, "Unimplemented Z80 opcode 0x%02X at PC=0x%04X\n", opcode, pc);
+    return 4;
 }
 
 uint8_t Z80::getReg(int reg_index) {
@@ -271,6 +260,38 @@ void Z80::setReg(int reg_index, uint8_t val) {
         case 6: writeByte(regs_.hl, val); break;
         case 7: setA(val); break;
     }
+}
+
+void Z80::add16(uint16_t& dest, uint16_t src) {
+    uint32_t val1 = dest;
+    uint32_t val2 = src;
+    uint32_t res = val1 + val2;
+    dest = static_cast<uint16_t>(res);
+    setFlagC(res > 0xFFFF);
+    setFlagH(((val1 & 0x0FFF) + (val2 & 0x0FFF)) > 0x0FFF);
+    setFlagN(false);
+}
+
+uint8_t Z80::inc8(uint8_t v) {
+    uint8_t res = v + 1;
+    setFlagS((res & 0x80) != 0);
+    setFlagZ(res == 0);
+    setFlagH((v & 0x0F) == 0x0F);
+    setFlagPV(v == 0x7F);
+    setFlagN(false);
+    setF35(res);
+    return res;
+}
+
+uint8_t Z80::dec8(uint8_t v) {
+    uint8_t res = v - 1;
+    setFlagS((res & 0x80) != 0);
+    setFlagZ(res == 0);
+    setFlagH((v & 0x0F) == 0x00);
+    setFlagPV(v == 0x80);
+    setFlagN(true);
+    setF35(res);
+    return res;
 }
 
 void Z80::aluADD(uint8_t val) {
@@ -382,7 +403,6 @@ void Z80::aluCP(uint8_t val) {
     setF35(val);
 }
 
-
 void Z80::push16(uint16_t val) {
     regs_.sp -= 2;
     writeByte(regs_.sp, val & 0xFF);
@@ -409,48 +429,6 @@ bool Z80::evalCondition(int cond) const {
     }
     return false;
 }
-
-
-uint8_t Z80::cbShift(int b, uint8_t val) {
-    uint8_t res = 0;
-    bool carry = getFlagC();
-    switch (b) {
-        case 0: // RLC
-            setFlagC((val & 0x80) != 0);
-            res = (val << 1) | (val >> 7);
-            break;
-        case 1: // RRC
-            setFlagC((val & 1) != 0);
-            res = (val >> 1) | (val << 7);
-            break;
-        case 2: // RL
-            setFlagC((val & 0x80) != 0);
-            res = (val << 1) | (carry ? 1 : 0);
-            break;
-        case 3: // RR
-            setFlagC((val & 1) != 0);
-            res = (val >> 1) | (carry ? 0x80 : 0);
-            break;
-        case 4: // SLA
-            setFlagC((val & 0x80) != 0);
-            res = val << 1;
-            break;
-        case 5: // SRA
-            setFlagC((val & 1) != 0);
-            res = (val & 0x80) | (val >> 1);
-            break;
-        case 6: // SLL
-            setFlagC((val & 0x80) != 0);
-            res = (val << 1) | 1;
-            break;
-        case 7: // SRL
-            setFlagC((val & 1) != 0);
-            res = val >> 1;
-            break;
-    }
-    return res;
-}
-
 
 void Z80::edSBC_HL(uint16_t val) {
     uint32_t hl = regs_.hl;
@@ -589,3 +567,21 @@ void Z80::edOUTD() {
     setFlagN(true);
 }
 
+RegisterSnapshot Z80::registers() const {
+    RegisterSnapshot snap;
+    snap.entries.push_back(RegisterEntry{"AF", regs_.af});
+    snap.entries.push_back(RegisterEntry{"BC", regs_.bc});
+    snap.entries.push_back(RegisterEntry{"DE", regs_.de});
+    snap.entries.push_back(RegisterEntry{"HL", regs_.hl});
+    snap.entries.push_back(RegisterEntry{"AF'", regs_.af_});
+    snap.entries.push_back(RegisterEntry{"BC'", regs_.bc_});
+    snap.entries.push_back(RegisterEntry{"DE'", regs_.de_});
+    snap.entries.push_back(RegisterEntry{"HL'", regs_.hl_});
+    snap.entries.push_back(RegisterEntry{"IX", regs_.ix});
+    snap.entries.push_back(RegisterEntry{"IY", regs_.iy});
+    snap.entries.push_back(RegisterEntry{"SP", regs_.sp});
+    snap.entries.push_back(RegisterEntry{"PC", regs_.pc});
+    snap.entries.push_back(RegisterEntry{"I", regs_.i});
+    snap.entries.push_back(RegisterEntry{"R", regs_.r});
+    return snap;
+}
