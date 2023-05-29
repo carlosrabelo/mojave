@@ -49,6 +49,24 @@ public:
         return (high << 8) | low;
     }
 
+    inline uint16_t read16_zp(uint8_t zp_addr) const {
+        uint8_t low = readByte(zp_addr);
+        uint8_t high = readByte(static_cast<uint8_t>(zp_addr + 1));
+        return (high << 8) | low;
+    }
+
+    uint16_t addrImmediate();
+    uint16_t addrAbsolute();
+    uint16_t addrZeroPage();
+    uint16_t addrAbsoluteX(bool& page_crossed);
+    uint16_t addrAbsoluteY(bool& page_crossed);
+    uint16_t addrZeroPageX();
+    uint16_t addrZeroPageY();
+    uint16_t addrIndexedIndirect();
+    uint16_t addrIndirectIndexed(bool& page_crossed);
+    uint16_t addrRelative(bool& page_crossed);
+    uint16_t addrIndirect();
+
     void updatePageTable() override;
 
 protected:
@@ -57,5 +75,7 @@ protected:
     uint8_t* read_pages_[64] = {};
     uint8_t* write_pages_[64] = {};
 };
+
+#include "cpus/m6502/addressing.hpp"
 
 #endif

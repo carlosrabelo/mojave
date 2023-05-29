@@ -63,7 +63,7 @@ Complete this section before any Z80 machine preset.
 
 Complete this section before `m6502` / `m6507` presets. M6507 reuses these handlers.
 
-- [ ] 13 addressing modes (absolute, zero-page, indexed, indirect, relative)
+- [x] 13 addressing modes (absolute, zero-page, indexed, indirect, relative)
 - [ ] Dispatch table (151 official opcodes, including NOP `0xEA`)
 - [ ] Loads (LDA/LDX/LDY), stores (STA/STX/STY), transfers (TAX etc.)
 - [ ] ALU: ADC, SBC, AND, ORA, EOR with flags
