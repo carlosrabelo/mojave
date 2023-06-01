@@ -1,4 +1,6 @@
 #include "cpus/m6502.hpp"
+#include "cpus/m6502/dispatch.hpp"
+#include <cstdio>
 
 void M6502::reset() {
     regs_ = M6502Registers{};
@@ -8,7 +10,12 @@ void M6502::reset() {
 
 unsigned M6502::step() {
     if (is_halted) return 2;
-    (void)readByte(regs_.pc++);
+    uint8_t opcode = readByte(regs_.pc++);
+    return (this->*m6502::kDispatch[opcode])();
+}
+
+unsigned M6502::opUnimplemented(uint8_t op) {
+    std::fprintf(stderr, "Unimplemented M6502 opcode 0x%02X at PC=0x%04X\n", op, static_cast<uint16_t>(regs_.pc - 1));
     return 2;
 }
 

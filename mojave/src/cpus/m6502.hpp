@@ -69,6 +69,23 @@ public:
 
     void updatePageTable() override;
 
+    using OpcodeHandler = unsigned (M6502::*)();
+    unsigned opUnimplemented(uint8_t op);
+
+#define DECL_OP_ROW(high) \
+    unsigned op##high##0(), op##high##1(), op##high##2(), op##high##3(), \
+             op##high##4(), op##high##5(), op##high##6(), op##high##7(), \
+             op##high##8(), op##high##9(), op##high##A(), op##high##B(), \
+             op##high##C(), op##high##D(), op##high##E(), op##high##F();
+
+    DECL_OP_ROW(0) DECL_OP_ROW(1) DECL_OP_ROW(2) DECL_OP_ROW(3)
+    DECL_OP_ROW(4) DECL_OP_ROW(5) DECL_OP_ROW(6) DECL_OP_ROW(7)
+    DECL_OP_ROW(8) DECL_OP_ROW(9) DECL_OP_ROW(A) DECL_OP_ROW(B)
+    DECL_OP_ROW(C) DECL_OP_ROW(D) DECL_OP_ROW(E) DECL_OP_ROW(F)
+
+#undef DECL_OP_ROW
+
+
 protected:
     M6502Registers regs_{};
     bool is_halted = false;

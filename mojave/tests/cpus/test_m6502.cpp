@@ -1,6 +1,7 @@
 #include <cstdint>
 #include "catch.hpp"
 #include "cpus/m6502.hpp"
+#include "cpus/m6502/dispatch.hpp"
 #include "helpers.hpp"
 
 TEST_CASE("M6502 reset clears registers and sets P to 0x34", "[cpu][m6502][fast]") {
@@ -244,5 +245,32 @@ TEST_CASE("M6502 Addressing Modes", "[cpu][m6502][fast]") {
         addr = cpu.addrIndirect();
         REQUIRE(addr == 0x9988);
     }
+}
+
+
+TEST_CASE("M6502 dispatch table has all 256 entries initialized", "[cpu][m6502][fast]") {
+    for (int i = 0; i < 256; ++i) {
+        REQUIRE(m6502::kDispatch[i] != nullptr);
+    }
+}
+
+TEST_CASE("M6502 official NOP 0xEA does not halt", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    bus_and_ram.ram->write(0x0000, 0xEA);
+    bus_and_ram.ram->write(0x0001, 0xEA);
+    cpu.regs().pc = 0x0000;
+
+    unsigned cycles = cpu.step();
+    REQUIRE(cycles == 2);
+    REQUIRE(cpu.regs().pc == 0x0001);
+    REQUIRE_FALSE(cpu.halted());
+
+    cycles = cpu.step();
+    REQUIRE(cycles == 2);
+    REQUIRE(cpu.regs().pc == 0x0002);
+    REQUIRE_FALSE(cpu.halted());
 }
 
