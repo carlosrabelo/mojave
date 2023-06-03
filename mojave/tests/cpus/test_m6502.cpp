@@ -274,3 +274,122 @@ TEST_CASE("M6502 official NOP 0xEA does not halt", "[cpu][m6502][fast]") {
     REQUIRE_FALSE(cpu.halted());
 }
 
+
+TEST_CASE("M6502 Loads, Stores, Transfers and Stack", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("LDA immediate") {
+        cpu.reset();
+        bus_and_ram.ram->write(0x0000, 0x42);
+        cpu.regs().pc = 0x0000;
+        unsigned cycles = cpu.opA9(); // LDA #$42
+        REQUIRE(cycles == 2);
+        REQUIRE(cpu.regs().a == 0x42);
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("LDA immediate zero and negative flags") {
+        cpu.reset();
+        bus_and_ram.ram->write(0x0000, 0x00);
+        cpu.regs().pc = 0x0000;
+        cpu.opA9(); // LDA #$00
+        REQUIRE(cpu.regs().a == 0x00);
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x80);
+        cpu.opA9(); // LDA #$80
+        REQUIRE(cpu.regs().a == 0x80);
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("STA/STX/STY zp") {
+        cpu.reset();
+        cpu.regs().a = 0x55;
+        cpu.regs().x = 0xAA;
+        cpu.regs().y = 0x11;
+
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10); // zp target 0x10
+        unsigned cycles = cpu.op85(); // STA $10
+        REQUIRE(cycles == 3);
+        REQUIRE(bus_and_ram.ram->read(0x0010) == 0x55);
+
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x11); // zp target 0x11
+        cycles = cpu.op86(); // STX $11
+        REQUIRE(cycles == 3);
+        REQUIRE(bus_and_ram.ram->read(0x0011) == 0xAA);
+
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x12); // zp target 0x12
+        cycles = cpu.op84(); // STY $12
+        REQUIRE(cycles == 3);
+        REQUIRE(bus_and_ram.ram->read(0x0012) == 0x11);
+    }
+
+    SECTION("Register Transfers") {
+        cpu.reset();
+        cpu.regs().a = 0x40;
+        cpu.regs().x = 0x00;
+
+        unsigned cycles = cpu.opAA(); // TAX
+        REQUIRE(cycles == 2);
+        REQUIRE(cpu.regs().x == 0x40);
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+
+        cpu.regs().a = 0x80;
+        cpu.opA8(); // TAY
+        REQUIRE(cpu.regs().y == 0x80);
+        REQUIRE(cpu.getFlagN());
+
+        cpu.regs().x = 0x00;
+        cpu.op8A(); // TXA
+        REQUIRE(cpu.regs().a == 0x00);
+        REQUIRE(cpu.getFlagZ());
+    }
+
+    SECTION("PHA/PLA Accumulator Stack") {
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().a = 0x5A;
+
+        unsigned cycles = cpu.op48(); // PHA
+        REQUIRE(cycles == 3);
+        REQUIRE(cpu.regs().sp == 0xFE);
+        REQUIRE(bus_and_ram.ram->read(0x01FF) == 0x5A);
+
+        cpu.regs().a = 0x00;
+        cycles = cpu.op68(); // PLA
+        REQUIRE(cycles == 4);
+        REQUIRE(cpu.regs().a == 0x5A);
+        REQUIRE(cpu.regs().sp == 0xFF);
+    }
+
+    SECTION("PHP/PLP Status Stack") {
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().p = 0x05; // flags: I flag disabled, Carry set (0000 0101)
+
+        unsigned cycles = cpu.op08(); // PHP
+        REQUIRE(cycles == 3);
+        REQUIRE(cpu.regs().sp == 0xFE);
+        // PHP sets bit 4 (B) and bit 5 (U) in the pushed value (0x05 | 0x30 = 0x35)
+        REQUIRE(bus_and_ram.ram->read(0x01FF) == 0x35);
+
+        cpu.regs().p = 0x00;
+        cycles = cpu.op28(); // PLP
+        REQUIRE(cycles == 4);
+        REQUIRE(cpu.regs().sp == 0xFF);
+        // PLP ignores bit 4 (B), but forces bit 5 (U) to 1.
+        // Pushed value was 0x35. Unstacked: (0x35 & ~0x10) | 0x20 = 0x25
+        REQUIRE(cpu.regs().p == 0x25);
+    }
+}
+

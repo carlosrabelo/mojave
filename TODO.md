@@ -65,7 +65,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 
 - [x] 13 addressing modes (absolute, zero-page, indexed, indirect, relative)
 - [x] Dispatch table (151 official opcodes, including NOP `0xEA`)
-- [ ] Loads (LDA/LDX/LDY), stores (STA/STX/STY), transfers (TAX etc.)
+- [x] Loads (LDA/LDX/LDY), stores (STA/STX/STY), transfers (TAX etc.)
 - [ ] ALU: ADC, SBC, AND, ORA, EOR with flags
 - [ ] BCD mode for ADC and SBC
 - [ ] Compare (CMP/CPX/CPY), BIT, INC/DEC, shifts (ASL/LSR/ROL/ROR)

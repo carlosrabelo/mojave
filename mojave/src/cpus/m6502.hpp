@@ -67,6 +67,35 @@ public:
     uint16_t addrRelative(bool& page_crossed);
     uint16_t addrIndirect();
 
+    inline bool getFlagN() const { return (regs_.p & 0x80) != 0; }
+    inline bool getFlagV() const { return (regs_.p & 0x40) != 0; }
+    inline bool getFlagD() const { return (regs_.p & 0x08) != 0; }
+    inline bool getFlagI() const { return (regs_.p & 0x04) != 0; }
+    inline bool getFlagZ() const { return (regs_.p & 0x02) != 0; }
+    inline bool getFlagC() const { return (regs_.p & 0x01) != 0; }
+
+    inline void setFlagN(bool val) { regs_.p = val ? (regs_.p | 0x80) : (regs_.p & ~0x80); }
+    inline void setFlagV(bool val) { regs_.p = val ? (regs_.p | 0x40) : (regs_.p & ~0x40); }
+    inline void setFlagD(bool val) { regs_.p = val ? (regs_.p | 0x08) : (regs_.p & ~0x08); }
+    inline void setFlagI(bool val) { regs_.p = val ? (regs_.p | 0x04) : (regs_.p & ~0x04); }
+    inline void setFlagZ(bool val) { regs_.p = val ? (regs_.p | 0x02) : (regs_.p & ~0x02); }
+    inline void setFlagC(bool val) { regs_.p = val ? (regs_.p | 0x01) : (regs_.p & ~0x01); }
+
+    inline void updateNZ(uint8_t val) {
+        setFlagN((val & 0x80) != 0);
+        setFlagZ(val == 0);
+    }
+
+    inline void push8(uint8_t val) {
+        writeByte(0x0100 | regs_.sp, val);
+        regs_.sp--;
+    }
+
+    inline uint8_t pop8() {
+        regs_.sp++;
+        return readByte(0x0100 | regs_.sp);
+    }
+
     void updatePageTable() override;
 
     using OpcodeHandler = unsigned (M6502::*)();
