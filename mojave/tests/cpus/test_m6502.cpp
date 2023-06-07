@@ -393,3 +393,159 @@ TEST_CASE("M6502 Loads, Stores, Transfers and Stack", "[cpu][m6502][fast]") {
     }
 }
 
+
+TEST_CASE("M6502 ALU Operations (AND, ORA, EOR, ADC, SBC)", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("AND operation") {
+        cpu.reset();
+        cpu.regs().a = 0xFF;
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0xA5);
+
+        cpu.op29(); // AND #$A5
+        REQUIRE(cpu.regs().a == 0xA5);
+        REQUIRE(cpu.getFlagN()); // 0xA5 is negative (bit 7 set)
+        REQUIRE_FALSE(cpu.getFlagZ());
+    }
+
+    SECTION("ORA operation") {
+        cpu.reset();
+        cpu.regs().a = 0x50;
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x0A);
+
+        cpu.op09(); // ORA #$0A
+        REQUIRE(cpu.regs().a == 0x5A);
+        REQUIRE_FALSE(cpu.getFlagN());
+        REQUIRE_FALSE(cpu.getFlagZ());
+    }
+
+    SECTION("EOR operation") {
+        cpu.reset();
+        cpu.regs().a = 0xAA;
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0xAA);
+
+        cpu.op49(); // EOR #$AA
+        REQUIRE(cpu.regs().a == 0x00);
+        REQUIRE_FALSE(cpu.getFlagN());
+        REQUIRE(cpu.getFlagZ());
+    }
+
+    SECTION("ADC binary mode no carry/overflow") {
+        cpu.reset();
+        cpu.regs().a = 0x50;
+        cpu.setFlagC(false);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10);
+
+        cpu.op69(); // ADC #$10 -> 0x50 + 0x10 + 0 = 0x60
+        REQUIRE(cpu.regs().a == 0x60);
+        REQUIRE_FALSE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagV());
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("ADC binary mode with carry in and out") {
+        cpu.reset();
+        cpu.regs().a = 0xFF;
+        cpu.setFlagC(true);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x01);
+
+        cpu.op69(); // ADC #$01 -> 0xFF + 0x01 + 1 = 0x101 -> 0x01 (Carry out)
+        REQUIRE(cpu.regs().a == 0x01);
+        REQUIRE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagV());
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("ADC binary mode overflow positive") {
+        cpu.reset();
+        cpu.regs().a = 0x50; // positive
+        cpu.setFlagC(false);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x40); // positive
+
+        cpu.op69(); // ADC #$40 -> 0x50 + 0x40 = 0x90 (negative)
+        REQUIRE(cpu.regs().a == 0x90);
+        REQUIRE_FALSE(cpu.getFlagC());
+        REQUIRE(cpu.getFlagV()); // Overflow set!
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("ADC binary mode overflow negative") {
+        cpu.reset();
+        cpu.regs().a = 0xD0; // negative (-48)
+        cpu.setFlagC(false);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x90); // negative (-112)
+
+        cpu.op69(); // ADC #$90 -> 0xD0 + 0x90 = 0x160 -> 0x60 (positive, 96)
+        REQUIRE(cpu.regs().a == 0x60);
+        REQUIRE(cpu.getFlagC()); // Carry set
+        REQUIRE(cpu.getFlagV()); // Overflow set!
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("SBC binary mode no borrow") {
+        cpu.reset();
+        cpu.regs().a = 0x50;
+        cpu.setFlagC(true); // C=1 means no borrow in SBC
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10);
+
+        cpu.opE9(); // SBC #$10 -> 0x50 - 0x10 - 0 = 0x40
+        REQUIRE(cpu.regs().a == 0x40);
+        REQUIRE(cpu.getFlagC()); // C=1 (no borrow occurred)
+        REQUIRE_FALSE(cpu.getFlagV());
+    }
+
+    SECTION("SBC binary mode with borrow") {
+        cpu.reset();
+        cpu.regs().a = 0x50;
+        cpu.setFlagC(false); // C=0 means borrow in SBC
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10);
+
+        cpu.opE9(); // SBC #$10 -> 0x50 - 0x10 - 1 = 0x3F
+        REQUIRE(cpu.regs().a == 0x3F);
+        REQUIRE(cpu.getFlagC()); // C=1 (no borrow occurred from final result)
+        REQUIRE_FALSE(cpu.getFlagV());
+    }
+
+    SECTION("SBC binary mode borrow out") {
+        cpu.reset();
+        cpu.regs().a = 0x50;
+        cpu.setFlagC(true);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x60);
+
+        cpu.opE9(); // SBC #$60 -> 0x50 - 0x60 = -0x10 -> 0xF0
+        REQUIRE(cpu.regs().a == 0xF0);
+        REQUIRE_FALSE(cpu.getFlagC()); // C=0 (borrow occurred)
+        REQUIRE_FALSE(cpu.getFlagV());
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("SBC binary mode overflow") {
+        cpu.reset();
+        cpu.regs().a = 0x50; // positive
+        cpu.setFlagC(true);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0xB0); // negative (-80)
+
+        cpu.opE9(); // SBC #$B0 -> 0x50 - (-0x50) = 0xA0 (negative)
+        REQUIRE(cpu.regs().a == 0xA0);
+        REQUIRE_FALSE(cpu.getFlagC()); // borrow occurred
+        REQUIRE(cpu.getFlagV()); // Overflow set!
+        REQUIRE(cpu.getFlagN());
+    }
+
+}
+

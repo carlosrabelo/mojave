@@ -96,6 +96,37 @@ public:
         return readByte(0x0100 | regs_.sp);
     }
 
+
+    inline void aluADC(uint8_t operand) {
+        uint16_t a = regs_.a;
+        uint16_t c = getFlagC() ? 1 : 0;
+        uint16_t sum = a + operand + c;
+        setFlagC(sum > 0xFF);
+        uint8_t result = static_cast<uint8_t>(sum);
+        setFlagV(((a ^ result) & (operand ^ result) & 0x80) != 0);
+        regs_.a = result;
+        updateNZ(regs_.a);
+    }
+
+    inline void aluSBC(uint8_t operand) {
+        aluADC(operand ^ 0xFF);
+    }
+
+    inline void aluAND(uint8_t operand) {
+        regs_.a &= operand;
+        updateNZ(regs_.a);
+    }
+
+    inline void aluORA(uint8_t operand) {
+        regs_.a |= operand;
+        updateNZ(regs_.a);
+    }
+
+    inline void aluEOR(uint8_t operand) {
+        regs_.a ^= operand;
+        updateNZ(regs_.a);
+    }
+
     void updatePageTable() override;
 
     using OpcodeHandler = unsigned (M6502::*)();
