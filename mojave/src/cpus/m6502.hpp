@@ -98,18 +98,69 @@ public:
 
 
     inline void aluADC(uint8_t operand) {
-        uint16_t a = regs_.a;
-        uint16_t c = getFlagC() ? 1 : 0;
-        uint16_t sum = a + operand + c;
-        setFlagC(sum > 0xFF);
-        uint8_t result = static_cast<uint8_t>(sum);
-        setFlagV(((a ^ result) & (operand ^ result) & 0x80) != 0);
-        regs_.a = result;
-        updateNZ(regs_.a);
+        if (getFlagD()) {
+            uint8_t a = regs_.a;
+            uint8_t c = getFlagC() ? 1 : 0;
+
+            // Intermediate binary sum for overflow flag
+            uint16_t sum_bin = a + operand + c;
+            setFlagV(((a ^ sum_bin) & (operand ^ sum_bin) & 0x80) != 0);
+
+            // BCD sum adjustment
+            uint16_t low = (a & 0x0F) + (operand & 0x0F) + c;
+            if (low > 9) {
+                low += 6;
+            }
+
+            uint16_t high = (a & 0xF0) + (operand & 0xF0) + (low & 0xF0);
+            bool carry_out = false;
+            if (high > 0x90) {
+                high += 0x60;
+                carry_out = true;
+            }
+            setFlagC(carry_out);
+
+            regs_.a = (high & 0xF0) | (low & 0x0F);
+            updateNZ(regs_.a);
+        } else {
+            uint16_t a = regs_.a;
+            uint16_t c = getFlagC() ? 1 : 0;
+            uint16_t sum = a + operand + c;
+
+            setFlagC(sum > 0xFF);
+            uint8_t result = static_cast<uint8_t>(sum);
+            setFlagV(((a ^ result) & (operand ^ result) & 0x80) != 0);
+            regs_.a = result;
+            updateNZ(regs_.a);
+        }
     }
 
     inline void aluSBC(uint8_t operand) {
-        aluADC(operand ^ 0xFF);
+        if (getFlagD()) {
+            uint8_t a = regs_.a;
+            uint8_t c = getFlagC() ? 1 : 0;
+
+            // Intermediate binary difference for carry/overflow flags
+            uint16_t diff = a - operand - (1 - c);
+            setFlagV(((a ^ diff) & (a ^ operand) & 0x80) != 0);
+            setFlagC(diff < 0x100);
+
+            // BCD subtract adjustment
+            uint16_t low = (a & 0x0F) - (operand & 0x0F) - (1 - c);
+            if (low & 0x10) {
+                low -= 6;
+            }
+
+            uint16_t high = (a & 0xF0) - (operand & 0xF0) - (low & 0x10);
+            if (high & 0x100) {
+                high -= 0x60;
+            }
+
+            regs_.a = (high & 0xF0) | (low & 0x0F);
+            updateNZ(regs_.a);
+        } else {
+            aluADC(operand ^ 0xFF);
+        }
     }
 
     inline void aluAND(uint8_t operand) {

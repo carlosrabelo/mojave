@@ -549,3 +549,67 @@ TEST_CASE("M6502 ALU Operations (AND, ORA, EOR, ADC, SBC)", "[cpu][m6502][fast]"
 
 }
 
+
+TEST_CASE("M6502 BCD mode for ADC and SBC", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0xF000);
+    cpu.setBus(bus_and_ram.bus.get());
+    cpu.regs().pc = 0x0000;
+
+    SECTION("ADC BCD mode carry generation") {
+        cpu.reset();
+        cpu.regs().a = 0x99; // BCD 99
+        cpu.setFlagD(true);  // Enable BCD mode
+        cpu.setFlagC(false);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x01); // BCD 01
+
+        cpu.op69(); // ADC #$01 -> BCD 99 + 01 + 0 = BCD 00 (Carry set)
+        REQUIRE(cpu.regs().a == 0x00);
+        REQUIRE(cpu.getFlagC()); // Carry should be set!
+        REQUIRE(cpu.getFlagZ()); // Zero flag set
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+    SECTION("ADC BCD mode simple sum") {
+        cpu.reset();
+        cpu.regs().a = 0x50; // BCD 50
+        cpu.setFlagD(true);  // Enable BCD mode
+        cpu.setFlagC(false);
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x40); // BCD 40
+
+        cpu.op69(); // ADC #$40 -> BCD 50 + 40 + 0 = BCD 90
+        REQUIRE(cpu.regs().a == 0x90);
+        REQUIRE_FALSE(cpu.getFlagC()); // Carry not set
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE(cpu.getFlagN()); // 0x90 has bit 7 set
+    }
+    SECTION("SBC BCD mode simple subtract") {
+        cpu.reset();
+        cpu.regs().a = 0x50; // BCD 50
+        cpu.setFlagD(true);  // Enable BCD mode
+        cpu.setFlagC(true);  // C=1 (no borrow)
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10); // BCD 10
+
+        cpu.opE9(); // SBC #$10 -> BCD 50 - 10 = BCD 40
+        REQUIRE(cpu.regs().a == 0x40);
+        REQUIRE(cpu.getFlagC()); // C=1 (no borrow occurred)
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+    SECTION("SBC BCD mode borrow generation") {
+        cpu.reset();
+        cpu.regs().a = 0x50; // BCD 50
+        cpu.setFlagD(true);  // Enable BCD mode
+        cpu.setFlagC(true);  // C=1 (no borrow)
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x60); // BCD 60
+
+        cpu.opE9(); // SBC #$60 -> BCD 50 - 60 = BCD 90 (borrow)
+        REQUIRE(cpu.regs().a == 0x90);
+        REQUIRE_FALSE(cpu.getFlagC()); // Carry cleared (borrow occurred)
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE(cpu.getFlagN());
+    }
+}
