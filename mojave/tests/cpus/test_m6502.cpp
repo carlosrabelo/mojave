@@ -613,3 +613,134 @@ TEST_CASE("M6502 BCD mode for ADC and SBC", "[cpu][m6502][fast]") {
         REQUIRE(cpu.getFlagN());
     }
 }
+
+TEST_CASE("M6502 Compares, Shifts, and Increments", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("CMP operation") {
+        cpu.reset();
+        cpu.regs().a = 10;
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 5);
+
+        unsigned cycles = cpu.opC9(); // CMP #5
+        REQUIRE(cycles == 2);
+        REQUIRE(cpu.getFlagC()); // 10 >= 5
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 10);
+        cpu.opC9(); // CMP #10
+        REQUIRE(cpu.getFlagC());
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 15);
+        cpu.opC9(); // CMP #15
+        REQUIRE_FALSE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE(cpu.getFlagN()); // 10 - 15 = -5 (negative)
+    }
+
+    SECTION("BIT operation") {
+        cpu.reset();
+        cpu.regs().a = 0x0F;
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10); // zp target address $10
+        bus_and_ram.ram->write(0x0010, 0xC0); // bits 7 and 6 set in memory at $10
+
+        unsigned cycles = cpu.op24(); // BIT zp
+        REQUIRE(cycles == 3);
+        REQUIRE(cpu.getFlagZ()); // 0x0F & 0xC0 == 0
+        REQUIRE(cpu.getFlagN()); // copy bit 7 (1)
+        REQUIRE(cpu.getFlagV()); // copy bit 6 (1)
+    }
+
+    SECTION("INX/DEX/INY/DEY register increments/decrements") {
+        cpu.reset();
+        cpu.regs().x = 0x7F;
+        cpu.regs().y = 0x01;
+
+        unsigned cycles = cpu.opE8(); // INX -> 0x80
+        REQUIRE(cycles == 2);
+        REQUIRE(cpu.regs().x == 0x80);
+        REQUIRE(cpu.getFlagN());
+        REQUIRE_FALSE(cpu.getFlagZ());
+
+        cycles = cpu.opCA(); // DEX -> 0x7F
+        REQUIRE(cycles == 2);
+        REQUIRE(cpu.regs().x == 0x7F);
+        REQUIRE_FALSE(cpu.getFlagN());
+        REQUIRE_FALSE(cpu.getFlagZ());
+
+        cycles = cpu.op88(); // DEY -> 0x00
+        REQUIRE(cycles == 2);
+        REQUIRE(cpu.regs().y == 0x00);
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+    }
+
+    SECTION("INC/DEC memory modifications") {
+        cpu.reset();
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10); // zp target address $10
+        bus_and_ram.ram->write(0x0010, 0x7F); // initial value $7F
+
+        unsigned cycles = cpu.opE6(); // INC zp
+        REQUIRE(cycles == 5);
+        REQUIRE(bus_and_ram.ram->read(0x0010) == 0x80);
+        REQUIRE(cpu.getFlagN()); // 0x80 is negative
+        REQUIRE_FALSE(cpu.getFlagZ());
+
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x10);
+        cycles = cpu.opC6(); // DEC zp
+        REQUIRE(cycles == 5);
+        REQUIRE(bus_and_ram.ram->read(0x0010) == 0x7F);
+        REQUIRE_FALSE(cpu.getFlagN());
+        REQUIRE_FALSE(cpu.getFlagZ());
+    }
+
+    SECTION("ASL/LSR/ROL/ROR shifts") {
+        // ASL accumulator
+        cpu.reset();
+        cpu.regs().a = 0x81;
+        cpu.op0A(); // ASL A -> 0x02, Carry=1
+        REQUIRE(cpu.regs().a == 0x02);
+        REQUIRE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+
+        // LSR accumulator
+        cpu.reset();
+        cpu.regs().a = 0x81;
+        cpu.op4A(); // LSR A -> 0x40, Carry=1
+        REQUIRE(cpu.regs().a == 0x40);
+        REQUIRE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagZ());
+        REQUIRE_FALSE(cpu.getFlagN());
+
+        // ROL accumulator
+        cpu.reset();
+        cpu.regs().a = 0x80;
+        cpu.setFlagC(true);
+        cpu.op2A(); // ROL A -> 0x01, Carry=1 (pushed from bit 7)
+        REQUIRE(cpu.regs().a == 0x01);
+        REQUIRE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagZ());
+
+        // ROR accumulator
+        cpu.reset();
+        cpu.regs().a = 0x01;
+        cpu.setFlagC(true);
+        cpu.op6A(); // ROR A -> 0x80, Carry=1 (pushed from bit 0)
+        REQUIRE(cpu.regs().a == 0x80);
+        REQUIRE(cpu.getFlagC());
+        REQUIRE(cpu.getFlagN());
+    }
+}
+

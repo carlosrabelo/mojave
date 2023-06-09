@@ -178,6 +178,50 @@ public:
         updateNZ(regs_.a);
     }
 
+    // Compare and BIT helpers
+    inline void aluCompare(uint8_t reg, uint8_t operand) {
+        uint16_t diff = reg - operand;
+        setFlagC(reg >= operand);
+        updateNZ(static_cast<uint8_t>(diff));
+    }
+
+    inline void aluBIT(uint8_t operand) {
+        setFlagZ((regs_.a & operand) == 0);
+        setFlagN((operand & 0x80) != 0);
+        setFlagV((operand & 0x40) != 0);
+    }
+
+    // Shift helpers
+    inline uint8_t shiftASL(uint8_t val) {
+        setFlagC((val & 0x80) != 0);
+        uint8_t res = val << 1;
+        updateNZ(res);
+        return res;
+    }
+
+    inline uint8_t shiftLSR(uint8_t val) {
+        setFlagC((val & 0x01) != 0);
+        uint8_t res = val >> 1;
+        updateNZ(res);
+        return res;
+    }
+
+    inline uint8_t shiftROL(uint8_t val) {
+        bool next_carry = (val & 0x80) != 0;
+        uint8_t res = (val << 1) | (getFlagC() ? 1 : 0);
+        setFlagC(next_carry);
+        updateNZ(res);
+        return res;
+    }
+
+    inline uint8_t shiftROR(uint8_t val) {
+        bool next_carry = (val & 0x01) != 0;
+        uint8_t res = (val >> 1) | (getFlagC() ? 0x80 : 0);
+        setFlagC(next_carry);
+        updateNZ(res);
+        return res;
+    }
+
     void updatePageTable() override;
 
     using OpcodeHandler = unsigned (M6502::*)();

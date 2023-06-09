@@ -68,7 +68,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 - [x] Loads (LDA/LDX/LDY), stores (STA/STX/STY), transfers (TAX etc.)
 - [x] ALU: ADC, SBC, AND, ORA, EOR with flags
 - [x] BCD mode for ADC and SBC
-- [ ] Compare (CMP/CPX/CPY), BIT, INC/DEC, shifts (ASL/LSR/ROL/ROR)
+- [x] Compare (CMP/CPX/CPY), BIT, INC/DEC, shifts (ASL/LSR/ROL/ROR)
 - [ ] Control flow (JMP, JSR, RTS, branches with page-cross penalty)
 - [ ] BRK, RTI, IRQ, NMI, flag instructions
 - [ ] NMOS unofficial opcodes (NOP variants, KIL/JAM, LAX, SAX, DCP, ISB, SLO, RLA, SRE, RRA, and remaining undocumented)
