@@ -744,3 +744,109 @@ TEST_CASE("M6502 Compares, Shifts, and Increments", "[cpu][m6502][fast]") {
     }
 }
 
+
+TEST_CASE("M6502 Control Flow (JMP, JSR, RTS, Branches)", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+
+    SECTION("JMP absolute") {
+        cpu.reset();
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x34);
+        bus_and_ram.ram->write(0x0001, 0x12); // target address 0x1234
+
+        unsigned cycles = cpu.op4C(); // JMP $1234
+        REQUIRE(cycles == 3);
+        REQUIRE(cpu.regs().pc == 0x1234);
+    }
+
+    SECTION("JMP indirect normal and page-wrap bug") {
+        // Normal indirect
+        cpu.reset();
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0x20);
+        bus_and_ram.ram->write(0x0001, 0x02); // indirect pointer at 0x0220
+
+        bus_and_ram.ram->write(0x0220, 0x78);
+        bus_and_ram.ram->write(0x0221, 0x56); // target address 0x5678
+
+        unsigned cycles = cpu.op6C(); // JMP ($0220)
+        REQUIRE(cycles == 5);
+        REQUIRE(cpu.regs().pc == 0x5678);
+
+        // Page wrap boundary bug
+        cpu.regs().pc = 0x0000;
+        bus_and_ram.ram->write(0x0000, 0xFF);
+        bus_and_ram.ram->write(0x0001, 0x02); // indirect pointer at 0x02FF
+
+        bus_and_ram.ram->write(0x02FF, 0x11);
+        bus_and_ram.ram->write(0x0200, 0x88); // wraps to 0x0200 instead of 0x0300
+
+        cycles = cpu.op6C(); // JMP ($02FF)
+        REQUIRE(cpu.regs().pc == 0x8811);
+    }
+
+    SECTION("JSR / RTS") {
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().pc = 0x0200; // JSR starts at 0x0200
+
+        bus_and_ram.ram->write(0x0200, 0x50);
+        bus_and_ram.ram->write(0x0201, 0x05); // JSR target is 0x0550
+
+        unsigned cycles = cpu.op20(); // JSR $0550
+        REQUIRE(cycles == 6);
+        REQUIRE(cpu.regs().pc == 0x0550);
+        REQUIRE(cpu.regs().sp == 0xFD);
+        // PC was incremented to 0x0202 when reading target address.
+        // Return PC is PC-1 = 0x0201 (last byte of JSR instruction)
+        uint16_t pushed_pc = bus_and_ram.ram->read(0x01FE) | (static_cast<uint16_t>(bus_and_ram.ram->read(0x01FF)) << 8);
+        REQUIRE(pushed_pc == 0x0201);
+
+        // RTS
+        cycles = cpu.op60(); // RTS
+        REQUIRE(cycles == 6);
+        REQUIRE(cpu.regs().pc == 0x0202); // Return PC + 1
+        REQUIRE(cpu.regs().sp == 0xFF);
+    }
+
+    SECTION("Branches conditions and cycle penalties") {
+        cpu.reset();
+        cpu.setFlagZ(true);
+        cpu.regs().pc = 0x0200;
+        bus_and_ram.ram->write(0x0200, 0x05); // offset +5
+
+        // BEQ taken, no page cross
+        // PC will increment to 0x0201 when reading offset, then add +5 -> 0x0206
+        unsigned cycles = cpu.opF0(); // BEQ +5
+        REQUIRE(cycles == 3); // taken = 3 cycles
+        REQUIRE(cpu.regs().pc == 0x0206);
+
+        // BEQ not taken
+        cpu.regs().pc = 0x0200;
+        cpu.setFlagZ(false);
+        cycles = cpu.opF0(); // BEQ +5
+        REQUIRE(cycles == 2); // not taken = 2 cycles
+        REQUIRE(cpu.regs().pc == 0x0201);
+
+        // BEQ taken, with page cross
+        cpu.regs().pc = 0x02FD; // PC starts near end of page 2
+        bus_and_ram.ram->write(0x02FD, 0x05); // offset +5
+        cpu.setFlagZ(true);
+        // PC increments to 0x02FE when reading offset, then adds +5 -> 0x0303 (crosses page to 3)
+        cycles = cpu.opF0();
+        REQUIRE(cycles == 4); // taken + page cross = 4 cycles
+        REQUIRE(cpu.regs().pc == 0x0303);
+
+        // Branch negative offset
+        cpu.regs().pc = 0x0210;
+        bus_and_ram.ram->write(0x0210, static_cast<uint8_t>(-6)); // offset -6
+        cpu.setFlagZ(true);
+        // PC increments to 0x0211, then adds -6 -> 0x020B
+        cycles = cpu.opF0();
+        REQUIRE(cycles == 3);
+        REQUIRE(cpu.regs().pc == 0x020B);
+    }
+}
+

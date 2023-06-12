@@ -222,6 +222,21 @@ public:
         return res;
     }
 
+    // Branch helper
+    inline unsigned aluBranch(bool condition) {
+        int8_t offset = static_cast<int8_t>(readByte(regs_.pc++));
+        if (condition) {
+            uint16_t old_pc = regs_.pc;
+            uint16_t target_pc = regs_.pc + offset;
+            regs_.pc = target_pc;
+            if ((old_pc & 0xFF00) != (target_pc & 0xFF00)) {
+                return 4;
+            }
+            return 3;
+        }
+        return 2;
+    }
+
     void updatePageTable() override;
 
     using OpcodeHandler = unsigned (M6502::*)();

@@ -10,7 +10,6 @@ unsigned M6502::op07() { return opUnimplemented(0x07); }
 unsigned M6502::op0B() { return opUnimplemented(0x0B); }
 unsigned M6502::op0C() { return opUnimplemented(0x0C); }
 unsigned M6502::op0F() { return opUnimplemented(0x0F); }
-unsigned M6502::op10() { return opUnimplemented(0x10); }
 unsigned M6502::op12() { return opUnimplemented(0x12); }
 unsigned M6502::op13() { return opUnimplemented(0x13); }
 unsigned M6502::op14() { return opUnimplemented(0x14); }
@@ -20,13 +19,11 @@ unsigned M6502::op1A() { return opUnimplemented(0x1A); }
 unsigned M6502::op1B() { return opUnimplemented(0x1B); }
 unsigned M6502::op1C() { return opUnimplemented(0x1C); }
 unsigned M6502::op1F() { return opUnimplemented(0x1F); }
-unsigned M6502::op20() { return opUnimplemented(0x20); }
 unsigned M6502::op22() { return opUnimplemented(0x22); }
 unsigned M6502::op23() { return opUnimplemented(0x23); }
 unsigned M6502::op27() { return opUnimplemented(0x27); }
 unsigned M6502::op2B() { return opUnimplemented(0x2B); }
 unsigned M6502::op2F() { return opUnimplemented(0x2F); }
-unsigned M6502::op30() { return opUnimplemented(0x30); }
 unsigned M6502::op32() { return opUnimplemented(0x32); }
 unsigned M6502::op33() { return opUnimplemented(0x33); }
 unsigned M6502::op34() { return opUnimplemented(0x34); }
@@ -42,9 +39,7 @@ unsigned M6502::op43() { return opUnimplemented(0x43); }
 unsigned M6502::op44() { return opUnimplemented(0x44); }
 unsigned M6502::op47() { return opUnimplemented(0x47); }
 unsigned M6502::op4B() { return opUnimplemented(0x4B); }
-unsigned M6502::op4C() { return opUnimplemented(0x4C); }
 unsigned M6502::op4F() { return opUnimplemented(0x4F); }
-unsigned M6502::op50() { return opUnimplemented(0x50); }
 unsigned M6502::op52() { return opUnimplemented(0x52); }
 unsigned M6502::op53() { return opUnimplemented(0x53); }
 unsigned M6502::op54() { return opUnimplemented(0x54); }
@@ -54,15 +49,12 @@ unsigned M6502::op5A() { return opUnimplemented(0x5A); }
 unsigned M6502::op5B() { return opUnimplemented(0x5B); }
 unsigned M6502::op5C() { return opUnimplemented(0x5C); }
 unsigned M6502::op5F() { return opUnimplemented(0x5F); }
-unsigned M6502::op60() { return opUnimplemented(0x60); }
 unsigned M6502::op62() { return opUnimplemented(0x62); }
 unsigned M6502::op63() { return opUnimplemented(0x63); }
 unsigned M6502::op64() { return opUnimplemented(0x64); }
 unsigned M6502::op67() { return opUnimplemented(0x67); }
 unsigned M6502::op6B() { return opUnimplemented(0x6B); }
-unsigned M6502::op6C() { return opUnimplemented(0x6C); }
 unsigned M6502::op6F() { return opUnimplemented(0x6F); }
-unsigned M6502::op70() { return opUnimplemented(0x70); }
 unsigned M6502::op72() { return opUnimplemented(0x72); }
 unsigned M6502::op73() { return opUnimplemented(0x73); }
 unsigned M6502::op74() { return opUnimplemented(0x74); }
@@ -79,7 +71,6 @@ unsigned M6502::op87() { return opUnimplemented(0x87); }
 unsigned M6502::op89() { return opUnimplemented(0x89); }
 unsigned M6502::op8B() { return opUnimplemented(0x8B); }
 unsigned M6502::op8F() { return opUnimplemented(0x8F); }
-unsigned M6502::op90() { return opUnimplemented(0x90); }
 unsigned M6502::op92() { return opUnimplemented(0x92); }
 unsigned M6502::op93() { return opUnimplemented(0x93); }
 unsigned M6502::op97() { return opUnimplemented(0x97); }
@@ -91,7 +82,6 @@ unsigned M6502::opA3() { return opUnimplemented(0xA3); }
 unsigned M6502::opA7() { return opUnimplemented(0xA7); }
 unsigned M6502::opAB() { return opUnimplemented(0xAB); }
 unsigned M6502::opAF() { return opUnimplemented(0xAF); }
-unsigned M6502::opB0() { return opUnimplemented(0xB0); }
 unsigned M6502::opB2() { return opUnimplemented(0xB2); }
 unsigned M6502::opB3() { return opUnimplemented(0xB3); }
 unsigned M6502::opB7() { return opUnimplemented(0xB7); }
@@ -103,7 +93,6 @@ unsigned M6502::opC3() { return opUnimplemented(0xC3); }
 unsigned M6502::opC7() { return opUnimplemented(0xC7); }
 unsigned M6502::opCB() { return opUnimplemented(0xCB); }
 unsigned M6502::opCF() { return opUnimplemented(0xCF); }
-unsigned M6502::opD0() { return opUnimplemented(0xD0); }
 unsigned M6502::opD2() { return opUnimplemented(0xD2); }
 unsigned M6502::opD3() { return opUnimplemented(0xD3); }
 unsigned M6502::opD4() { return opUnimplemented(0xD4); }
@@ -119,7 +108,6 @@ unsigned M6502::opE7() { return opUnimplemented(0xE7); }
 unsigned M6502::opEA() { return opUnimplemented(0xEA); }
 unsigned M6502::opEB() { return opUnimplemented(0xEB); }
 unsigned M6502::opEF() { return opUnimplemented(0xEF); }
-unsigned M6502::opF0() { return opUnimplemented(0xF0); }
 unsigned M6502::opF2() { return opUnimplemented(0xF2); }
 unsigned M6502::opF3() { return opUnimplemented(0xF3); }
 unsigned M6502::opF4() { return opUnimplemented(0xF4); }
