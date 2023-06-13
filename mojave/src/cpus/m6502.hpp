@@ -21,6 +21,9 @@ public:
     bool halted() const override { return is_halted; }
     RegisterSnapshot registers() const override;
 
+    void irq();
+    void nmi();
+
     M6502Registers& regs() { return regs_; }
     const M6502Registers& regs() const { return regs_; }
 
@@ -259,6 +262,8 @@ public:
 protected:
     M6502Registers regs_{};
     bool is_halted = false;
+    bool pending_irq = false;
+    bool pending_nmi = false;
     uint8_t* read_pages_[64] = {};
     uint8_t* write_pages_[64] = {};
 };

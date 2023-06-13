@@ -850,3 +850,121 @@ TEST_CASE("M6502 Control Flow (JMP, JSR, RTS, Branches)", "[cpu][m6502][fast]") 
     }
 }
 
+
+TEST_CASE("M6502 Interrupts and Flag Instructions", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus = std::make_unique<Bus>();
+    auto ram1 = std::make_unique<Memory>(0x8000); // 32 KiB
+    auto ram2 = std::make_unique<Memory>(0x8000); // 32 KiB
+    bus->attach(*ram1, 0x0000, 0x8000);
+    bus->attach(*ram2, 0x8000, 0x0000); // end_exclusive = 0 (covers up to 0xFFFF)
+    cpu.setBus(bus.get());
+
+    SECTION("Flag instructions") {
+        cpu.reset();
+
+        cpu.op38(); // SEC
+        REQUIRE(cpu.getFlagC());
+        cpu.op18(); // CLC
+        REQUIRE_FALSE(cpu.getFlagC());
+
+        cpu.op78(); // SEI
+        REQUIRE(cpu.getFlagI());
+        cpu.op58(); // CLI
+        REQUIRE_FALSE(cpu.getFlagI());
+
+        cpu.opF8(); // SED
+        REQUIRE(cpu.getFlagD());
+        cpu.opD8(); // CLD
+        REQUIRE_FALSE(cpu.getFlagD());
+    }
+
+    SECTION("BRK and RTI") {
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().pc = 0x0200; // BRK instruction at 0x0200
+
+        bus->write(0x0200, 0x00); // Write BRK opcode
+
+        // Setup IRQ/BRK Vector to $1234
+        bus->write(0xFFFE, 0x34);
+        bus->write(0xFFFF, 0x12);
+
+        // BRK
+        unsigned cycles = cpu.step(); // Run BRK via step
+        REQUIRE(cycles == 7);
+        REQUIRE(cpu.regs().pc == 0x1234);
+        REQUIRE(cpu.getFlagI()); // BRK disables interrupts
+        REQUIRE(cpu.regs().sp == 0xFC);
+
+        // Ret PC is PC+2 from original PC (0x0200 + 2 = 0x0202)
+        // Check stack (PC high at 0x01FF, PC low at 0x01FE, P at 0x01FD)
+        uint16_t pushed_pc = bus->read(0x01FE) | (static_cast<uint16_t>(bus->read(0x01FF)) << 8);
+        REQUIRE(pushed_pc == 0x0202);
+
+        // Pushed status has B and U flags set (0x30)
+        uint8_t pushed_p = bus->read(0x01FD);
+        REQUIRE((pushed_p & 0x30) == 0x30);
+
+        // RTI
+        // Modify pushed status on stack to check flag restoration
+        bus->write(0x01FD, 0x01); // set Carry only (0x01)
+        cycles = cpu.op40(); // RTI
+        REQUIRE(cycles == 6);
+        REQUIRE(cpu.regs().pc == 0x0202);
+        REQUIRE(cpu.regs().sp == 0xFF);
+        // Popped status ignores B (bit 4) but sets U (bit 5) to 1: (0x01 & ~0x10) | 0x20 = 0x21
+        REQUIRE(cpu.regs().p == 0x21);
+    }
+
+    SECTION("IRQ and NMI hardware interrupts") {
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().pc = 0x0500;
+
+        // Vectors
+        bus->write(0xFFFA, 0x22);
+        bus->write(0xFFFB, 0x11); // NMI vector $1122
+
+        bus->write(0xFFFE, 0x44);
+        bus->write(0xFFFF, 0x33); // IRQ vector $3344
+
+        // 1. IRQ when I flag is set (ignored)
+        cpu.setFlagI(true);
+        bus->write(0x0500, 0xEA); // Write NOP to avoid executing BRK from uninitialized RAM
+        cpu.irq();
+        unsigned cycles = cpu.step(); // should execute next instruction (NOP), not IRQ
+        REQUIRE_FALSE(cpu.regs().pc == 0x3344);
+        REQUIRE(cpu.regs().pc == 0x0501);
+
+        // 2. IRQ when I flag is clear
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().pc = 0x0500;
+        bus->write(0x0500, 0xEA); // Write NOP
+        cpu.setFlagI(false);
+        cpu.irq();
+        cycles = cpu.step(); // takes IRQ
+        REQUIRE(cycles == 7);
+        REQUIRE(cpu.regs().pc == 0x3344);
+        REQUIRE(cpu.getFlagI()); // Sets I flag
+        // Stack should contain PC ($0500) and status with B flag clear (bit 4 = 0)
+        uint16_t pushed_pc = bus->read(0x01FE) | (static_cast<uint16_t>(bus->read(0x01FF)) << 8);
+        REQUIRE(pushed_pc == 0x0500);
+        uint8_t pushed_p = bus->read(0x01FD);
+        REQUIRE_FALSE((pushed_p & 0x10)); // B flag should be 0
+
+        // 3. NMI (always taken, even if I flag is set)
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().pc = 0x0500;
+        bus->write(0x0500, 0xEA); // Write NOP
+        cpu.setFlagI(true);
+        cpu.nmi();
+        cycles = cpu.step(); // takes NMI
+        REQUIRE(cycles == 7);
+        REQUIRE(cpu.regs().pc == 0x1122);
+        REQUIRE(cpu.getFlagI());
+    }
+}
+

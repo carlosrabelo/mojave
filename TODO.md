@@ -70,7 +70,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 - [x] BCD mode for ADC and SBC
 - [x] Compare (CMP/CPX/CPY), BIT, INC/DEC, shifts (ASL/LSR/ROL/ROR)
 - [x] Control flow (JMP, JSR, RTS, branches with page-cross penalty)
-- [ ] BRK, RTI, IRQ, NMI, flag instructions
+- [x] BRK, RTI, IRQ, NMI, flag instructions
 - [ ] NMOS unofficial opcodes (NOP variants, KIL/JAM, LAX, SAX, DCP, ISB, SLO, RLA, SRE, RRA, and remaining undocumented)
 
 ## MOS 6507
