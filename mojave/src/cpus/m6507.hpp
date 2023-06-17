@@ -11,6 +11,14 @@ public:
         return addr & 0x1FFF;
     }
 
+    uint8_t readByte(uint16_t addr) const override {
+        return M6502::readByte(addr & 0x1FFF);
+    }
+
+    void writeByte(uint16_t addr, uint8_t val) override {
+        M6502::writeByte(addr & 0x1FFF, val);
+    }
+
     // Ignore hardware interrupts (MOS 6507 has no external interrupt pins)
     void irq() {
         // Ignored
