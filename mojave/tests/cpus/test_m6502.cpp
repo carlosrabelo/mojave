@@ -48,17 +48,17 @@ TEST_CASE("M6502 registers returns all 6 register entries", "[cpu][m6502][fast]"
     cpu.regs().y  = 0xCC;
     cpu.regs().sp = 0xDD;
     cpu.regs().pc = 0xEEFF;
-    cpu.regs().p  = 0x34;
+    cpu.regs().p  = 0x80;
 
     auto snap = cpu.registers();
 
     REQUIRE(snap.entries.size() == 6);
     REQUIRE(snap.entries[0].name == "A");
     REQUIRE(snap.entries[0].value == 0xAA);
-    REQUIRE(snap.entries[1].name == "X");
-    REQUIRE(snap.entries[1].value == 0xBB);
     REQUIRE(snap.entries[4].name == "PC");
     REQUIRE(snap.entries[4].value == 0xEEFF);
+    REQUIRE(snap.entries[5].name == "P");
+    REQUIRE(snap.entries[5].value == 0x80);
 }
 
 TEST_CASE("M6502 Addressing Modes", "[cpu][m6502][fast]") {
@@ -247,7 +247,6 @@ TEST_CASE("M6502 Addressing Modes", "[cpu][m6502][fast]") {
     }
 }
 
-
 TEST_CASE("M6502 dispatch table has all 256 entries initialized", "[cpu][m6502][fast]") {
     for (int i = 0; i < 256; ++i) {
         REQUIRE(m6502::kDispatch[i] != nullptr);
@@ -273,7 +272,6 @@ TEST_CASE("M6502 official NOP 0xEA does not halt", "[cpu][m6502][fast]") {
     REQUIRE(cpu.regs().pc == 0x0002);
     REQUIRE_FALSE(cpu.halted());
 }
-
 
 TEST_CASE("M6502 Loads, Stores, Transfers and Stack", "[cpu][m6502][fast]") {
     M6502 cpu;
@@ -392,7 +390,6 @@ TEST_CASE("M6502 Loads, Stores, Transfers and Stack", "[cpu][m6502][fast]") {
         REQUIRE(cpu.regs().p == 0x25);
     }
 }
-
 
 TEST_CASE("M6502 ALU Operations (AND, ORA, EOR, ADC, SBC)", "[cpu][m6502][fast]") {
     M6502 cpu;
@@ -547,15 +544,6 @@ TEST_CASE("M6502 ALU Operations (AND, ORA, EOR, ADC, SBC)", "[cpu][m6502][fast]"
         REQUIRE(cpu.getFlagN());
     }
 
-}
-
-
-TEST_CASE("M6502 BCD mode for ADC and SBC", "[cpu][m6502][fast]") {
-    M6502 cpu;
-    auto bus_and_ram = createBusWithRam(0x0000, 0xF000);
-    cpu.setBus(bus_and_ram.bus.get());
-    cpu.regs().pc = 0x0000;
-
     SECTION("ADC BCD mode carry generation") {
         cpu.reset();
         cpu.regs().a = 0x99; // BCD 99
@@ -570,6 +558,7 @@ TEST_CASE("M6502 BCD mode for ADC and SBC", "[cpu][m6502][fast]") {
         REQUIRE(cpu.getFlagZ()); // Zero flag set
         REQUIRE_FALSE(cpu.getFlagN());
     }
+
     SECTION("ADC BCD mode simple sum") {
         cpu.reset();
         cpu.regs().a = 0x50; // BCD 50
@@ -584,6 +573,7 @@ TEST_CASE("M6502 BCD mode for ADC and SBC", "[cpu][m6502][fast]") {
         REQUIRE_FALSE(cpu.getFlagZ());
         REQUIRE(cpu.getFlagN()); // 0x90 has bit 7 set
     }
+
     SECTION("SBC BCD mode simple subtract") {
         cpu.reset();
         cpu.regs().a = 0x50; // BCD 50
@@ -598,6 +588,7 @@ TEST_CASE("M6502 BCD mode for ADC and SBC", "[cpu][m6502][fast]") {
         REQUIRE_FALSE(cpu.getFlagZ());
         REQUIRE_FALSE(cpu.getFlagN());
     }
+
     SECTION("SBC BCD mode borrow generation") {
         cpu.reset();
         cpu.regs().a = 0x50; // BCD 50
@@ -744,7 +735,6 @@ TEST_CASE("M6502 Compares, Shifts, and Increments", "[cpu][m6502][fast]") {
     }
 }
 
-
 TEST_CASE("M6502 Control Flow (JMP, JSR, RTS, Branches)", "[cpu][m6502][fast]") {
     M6502 cpu;
     auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
@@ -849,7 +839,6 @@ TEST_CASE("M6502 Control Flow (JMP, JSR, RTS, Branches)", "[cpu][m6502][fast]") 
         REQUIRE(cpu.regs().pc == 0x020B);
     }
 }
-
 
 TEST_CASE("M6502 Interrupts and Flag Instructions", "[cpu][m6502][fast]") {
     M6502 cpu;
@@ -968,3 +957,194 @@ TEST_CASE("M6502 Interrupts and Flag Instructions", "[cpu][m6502][fast]") {
     }
 }
 
+TEST_CASE("M6502 NMOS unofficial opcodes", "[cpu][m6502][fast]") {
+    M6502 cpu;
+    auto bus_and_ram = createBusWithRam(0x0000, 0x1000);
+    cpu.setBus(bus_and_ram.bus.get());
+    auto* ram = bus_and_ram.ram.get();
+
+    SECTION("Implied unofficial NOP does not halt") {
+        ram->write(0x0000, 0x1A);
+        ram->write(0x0001, 0x1A);
+        cpu.regs().pc = 0x0000;
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().pc == 0x0001);
+        REQUIRE_FALSE(cpu.halted());
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().pc == 0x0002);
+        REQUIRE_FALSE(cpu.halted());
+    }
+
+    SECTION("Absolute,X unofficial NOP consumes the operand") {
+        ram->write(0x0000, 0xFC);
+        ram->write(0x0001, 0x00);
+        ram->write(0x0002, 0x02);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().x = 0x10;
+        REQUIRE(cpu.step() == 4);
+        REQUIRE(cpu.regs().pc == 0x0003);
+        REQUIRE_FALSE(cpu.halted());
+    }
+
+    SECTION("KIL/JAM halts the CPU") {
+        ram->write(0x0000, 0x02);
+        cpu.regs().pc = 0x0000;
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.halted());
+        uint16_t pc = cpu.regs().pc;
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().pc == pc);
+    }
+
+    SECTION("SLO zp is ASL then ORA") {
+        ram->write(0x0010, 0x40);
+        ram->write(0x0000, 0x07);
+        ram->write(0x0001, 0x10);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x01;
+        REQUIRE(cpu.step() == 5);
+        REQUIRE(ram->read(0x0010) == 0x80);
+        REQUIRE(cpu.regs().a == 0x81);
+        REQUIRE(cpu.getFlagN());
+        REQUIRE_FALSE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.halted());
+    }
+
+    SECTION("LAX zp loads A and X") {
+        ram->write(0x0020, 0xC3);
+        ram->write(0x0000, 0xA7);
+        ram->write(0x0001, 0x20);
+        cpu.regs().pc = 0x0000;
+        REQUIRE(cpu.step() == 3);
+        REQUIRE(cpu.regs().a == 0xC3);
+        REQUIRE(cpu.regs().x == 0xC3);
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("SAX zp stores A & X") {
+        ram->write(0x0000, 0x87);
+        ram->write(0x0001, 0x30);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0xF0;
+        cpu.regs().x = 0x3C;
+        REQUIRE(cpu.step() == 3);
+        REQUIRE(ram->read(0x0030) == 0x30);
+    }
+
+    SECTION("DCP zp decrements then compares") {
+        ram->write(0x0040, 0x11);
+        ram->write(0x0000, 0xC7);
+        ram->write(0x0001, 0x40);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x10;
+        REQUIRE(cpu.step() == 5);
+        REQUIRE(ram->read(0x0040) == 0x10);
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE(cpu.getFlagC());
+    }
+
+    SECTION("ISB zp increments then SBC") {
+        ram->write(0x0050, 0x01);
+        ram->write(0x0000, 0xE7);
+        ram->write(0x0001, 0x50);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x05;
+        cpu.setFlagC(true);
+        REQUIRE(cpu.step() == 5);
+        REQUIRE(ram->read(0x0050) == 0x02);
+        REQUIRE(cpu.regs().a == 0x03);
+    }
+
+    SECTION("RLA zp is ROL then AND") {
+        ram->write(0x0060, 0x40);
+        ram->write(0x0000, 0x27);
+        ram->write(0x0001, 0x60);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0xFF;
+        cpu.setFlagC(true);
+        REQUIRE(cpu.step() == 5);
+        REQUIRE(ram->read(0x0060) == 0x81);
+        REQUIRE(cpu.regs().a == 0x81);
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("SRE zp is LSR then EOR") {
+        ram->write(0x0070, 0x03);
+        ram->write(0x0000, 0x47);
+        ram->write(0x0001, 0x70);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x01;
+        REQUIRE(cpu.step() == 5);
+        REQUIRE(ram->read(0x0070) == 0x01);
+        REQUIRE(cpu.regs().a == 0x00);
+        REQUIRE(cpu.getFlagZ());
+        REQUIRE(cpu.getFlagC());
+    }
+
+    SECTION("RRA zp is ROR then ADC") {
+        ram->write(0x0080, 0x02);
+        ram->write(0x0000, 0x67);
+        ram->write(0x0001, 0x80);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x01;
+        cpu.setFlagC(false);
+        REQUIRE(cpu.step() == 5);
+        REQUIRE(ram->read(0x0080) == 0x01);
+        REQUIRE(cpu.regs().a == 0x02);
+    }
+
+    SECTION("ANC #imm sets C from N") {
+        ram->write(0x0000, 0x0B);
+        ram->write(0x0001, 0x80);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0xFF;
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().a == 0x80);
+        REQUIRE(cpu.getFlagN());
+        REQUIRE(cpu.getFlagC());
+    }
+
+    SECTION("ALR #imm is AND then LSR") {
+        ram->write(0x0000, 0x4B);
+        ram->write(0x0001, 0x03);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x07;
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().a == 0x01);
+        REQUIRE(cpu.getFlagC());
+    }
+
+    SECTION("ARR #imm rotates and sets C/V from bits 6/5") {
+        ram->write(0x0000, 0x6B);
+        ram->write(0x0001, 0xFF);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0xC0;
+        cpu.setFlagC(true);
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().a == 0xE0);
+        REQUIRE(cpu.getFlagC());
+        REQUIRE_FALSE(cpu.getFlagV());
+        REQUIRE(cpu.getFlagN());
+    }
+
+    SECTION("AXS #imm subtracts from A & X") {
+        ram->write(0x0000, 0xCB);
+        ram->write(0x0001, 0x01);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x0F;
+        cpu.regs().x = 0x07;
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().x == 0x06);
+        REQUIRE(cpu.getFlagC());
+    }
+
+    SECTION("Unofficial SBC #imm matches official SBC") {
+        ram->write(0x0000, 0xEB);
+        ram->write(0x0001, 0x01);
+        cpu.regs().pc = 0x0000;
+        cpu.regs().a = 0x05;
+        cpu.setFlagC(true);
+        REQUIRE(cpu.step() == 2);
+        REQUIRE(cpu.regs().a == 0x04);
+    }
+}

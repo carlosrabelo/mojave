@@ -9,7 +9,7 @@ struct M6502Registers {
     uint8_t a=0, x=0, y=0;
     uint8_t sp=0xFD;
     uint16_t pc=0;
-    uint8_t p=0x34;
+    uint8_t p=0x34; // NV*B*DIZC -> 0011 0100
 };
 
 class M6502 : public Cpu {
@@ -27,6 +27,7 @@ public:
     M6502Registers& regs() { return regs_; }
     const M6502Registers& regs() const { return regs_; }
 
+    // Memory access inline helpers (optimized fast-path)
     virtual uint8_t readByte(uint16_t addr) const {
         uint8_t* page_ptr = read_pages_[addr >> 10];
         if (page_ptr) [[likely]] {
@@ -58,18 +59,7 @@ public:
         return (high << 8) | low;
     }
 
-    uint16_t addrImmediate();
-    uint16_t addrAbsolute();
-    uint16_t addrZeroPage();
-    uint16_t addrAbsoluteX(bool& page_crossed);
-    uint16_t addrAbsoluteY(bool& page_crossed);
-    uint16_t addrZeroPageX();
-    uint16_t addrZeroPageY();
-    uint16_t addrIndexedIndirect();
-    uint16_t addrIndirectIndexed(bool& page_crossed);
-    uint16_t addrRelative(bool& page_crossed);
-    uint16_t addrIndirect();
-
+    // Status flag helpers
     inline bool getFlagN() const { return (regs_.p & 0x80) != 0; }
     inline bool getFlagV() const { return (regs_.p & 0x40) != 0; }
     inline bool getFlagD() const { return (regs_.p & 0x08) != 0; }
@@ -89,6 +79,7 @@ public:
         setFlagZ(val == 0);
     }
 
+    // Stack operations
     inline void push8(uint8_t val) {
         writeByte(0x0100 | regs_.sp, val);
         regs_.sp--;
@@ -99,7 +90,7 @@ public:
         return readByte(0x0100 | regs_.sp);
     }
 
-
+    // ALU helpers
     inline void aluADC(uint8_t operand) {
         if (getFlagD()) {
             uint8_t a = regs_.a;
@@ -258,16 +249,30 @@ public:
 
 #undef DECL_OP_ROW
 
+    // 13 Addressing Modes
+    uint16_t addrImmediate();
+    uint16_t addrAbsolute();
+    uint16_t addrZeroPage();
+    uint16_t addrAbsoluteX(bool& page_crossed);
+    uint16_t addrAbsoluteY(bool& page_crossed);
+    uint16_t addrZeroPageX();
+    uint16_t addrZeroPageY();
+    uint16_t addrIndexedIndirect();
+    uint16_t addrIndirectIndexed(bool& page_crossed);
+    uint16_t addrRelative(bool& page_crossed);
+    uint16_t addrIndirect();
 
-protected:
+private:
     M6502Registers regs_{};
     bool is_halted = false;
     bool pending_irq = false;
     bool pending_nmi = false;
+
     uint8_t* read_pages_[64] = {};
     uint8_t* write_pages_[64] = {};
 };
 
+// Include inline implementations of addressing modes
 #include "cpus/m6502/addressing.hpp"
 
 #endif

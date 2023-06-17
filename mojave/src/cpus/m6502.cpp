@@ -1,6 +1,5 @@
 #include "cpus/m6502.hpp"
 #include "cpus/m6502/dispatch.hpp"
-#include <cstdio>
 
 void M6502::reset() {
     regs_ = M6502Registers{};
@@ -57,12 +56,6 @@ RegisterSnapshot M6502::registers() const {
     snap.entries.push_back(RegisterEntry{"PC", regs_.pc});
     snap.entries.push_back(RegisterEntry{"P", regs_.p});
     return snap;
-}
-
-unsigned M6502::opUnimplemented(uint8_t op) {
-    std::fprintf(stderr, "Unimplemented M6502 opcode 0x%02X at PC=0x%04X\n", op,
-                 static_cast<uint16_t>(regs_.pc - 1));
-    return 2;
 }
 
 void M6502::updatePageTable() {
