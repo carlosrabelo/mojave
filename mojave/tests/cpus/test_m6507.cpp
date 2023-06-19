@@ -110,3 +110,56 @@ TEST_CASE("M6507 8 KiB Wrap and Interrupt Behavior", "[cpu][m6507][fast]") {
 
 }
 
+
+TEST_CASE("M6507 external IRQ and NMI ignored; BRK uses masked vector", "[cpu][m6507][fast]") {
+    M6507 cpu;
+    auto bus = std::make_unique<Bus>();
+    auto ram = std::make_unique<Memory>(0x2000);
+    bus->attach(*ram, 0x0000, 0x2000);
+    cpu.setBus(bus.get());
+
+    SECTION("External interrupts irq() and nmi() are ignored") {
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().pc = 0x0500;
+        ram->write(0x0500, 0xEA); // NOP
+
+        // Setup vector at masked 0x1FFE/0x1FFF ($1FFE-$1FFF)
+        ram->write(0x1FFE, 0x44);
+        ram->write(0x1FFF, 0x33); // Vector $3344
+
+        cpu.setFlagI(false);
+        cpu.irq();
+        unsigned cycles = cpu.step(); // should run NOP, not IRQ
+        REQUIRE_FALSE(cpu.regs().pc == 0x3344);
+        REQUIRE(cpu.regs().pc == 0x0501);
+
+        cpu.nmi();
+        cycles = cpu.step(); // should run NOP, not NMI
+        REQUIRE_FALSE(cpu.regs().pc == 0x1122);
+    }
+    SECTION("BRK and RTI work with 8 KiB wraps") {
+        cpu.reset();
+        cpu.regs().sp = 0xFF;
+        cpu.regs().pc = 0x0200;
+        ram->write(0x0200, 0x00); // BRK
+
+        // Setup IRQ/BRK Vector at masked $1FFE/$1FFF (corresponds to physical $1FFE/$1FFF)
+        ram->write(0x1FFE, 0x34);
+        ram->write(0x1FFF, 0x12); // Vector $1234
+
+        unsigned cycles = cpu.step(); // Run BRK via step
+        REQUIRE(cycles == 7);
+        REQUIRE(cpu.regs().pc == 0x1234);
+
+        // Stack has PC high at 0x01FF, PC low at 0x01FE, P at 0x01FD
+        uint16_t pushed_pc = ram->read(0x01FE) | (static_cast<uint16_t>(ram->read(0x01FF)) << 8);
+        REQUIRE(pushed_pc == 0x0202);
+
+        ram->write(0x01FD, 0x01); // Set Carry
+        cycles = cpu.op40(); // RTI
+        REQUIRE(cycles == 6);
+        REQUIRE(cpu.regs().pc == 0x0202);
+        REQUIRE(cpu.regs().p == 0x21);
+    }
+}
