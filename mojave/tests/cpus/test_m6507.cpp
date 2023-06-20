@@ -1,7 +1,6 @@
 #include <cstdint>
 #include "catch.hpp"
 #include "cpus/m6507.hpp"
-#include "helpers.hpp"
 
 TEST_CASE("M6507 inherits M6502 registers and behavior", "[cpu][m6507][fast]") {
     M6507 cpu;
@@ -50,6 +49,8 @@ TEST_CASE("M6507 registers returns 6 entries like M6502", "[cpu][m6507][fast]") 
     REQUIRE(snap.entries[4].name == "PC");
     REQUIRE(snap.entries[4].value == 0xEEFF);
 }
+
+#include "helpers.hpp"
 
 TEST_CASE("M6507 8 KiB Wrap and Interrupt Behavior", "[cpu][m6507][fast]") {
     M6507 cpu;
@@ -108,16 +109,6 @@ TEST_CASE("M6507 8 KiB Wrap and Interrupt Behavior", "[cpu][m6507][fast]") {
         REQUIRE_FALSE(cpu.halted());
     }
 
-}
-
-
-TEST_CASE("M6507 external IRQ and NMI ignored; BRK uses masked vector", "[cpu][m6507][fast]") {
-    M6507 cpu;
-    auto bus = std::make_unique<Bus>();
-    auto ram = std::make_unique<Memory>(0x2000);
-    bus->attach(*ram, 0x0000, 0x2000);
-    cpu.setBus(bus.get());
-
     SECTION("External interrupts irq() and nmi() are ignored") {
         cpu.reset();
         cpu.regs().sp = 0xFF;
@@ -138,6 +129,7 @@ TEST_CASE("M6507 external IRQ and NMI ignored; BRK uses masked vector", "[cpu][m
         cycles = cpu.step(); // should run NOP, not NMI
         REQUIRE_FALSE(cpu.regs().pc == 0x1122);
     }
+
     SECTION("BRK and RTI work with 8 KiB wraps") {
         cpu.reset();
         cpu.regs().sp = 0xFF;
@@ -161,5 +153,71 @@ TEST_CASE("M6507 external IRQ and NMI ignored; BRK uses masked vector", "[cpu][m
         REQUIRE(cycles == 6);
         REQUIRE(cpu.regs().pc == 0x0202);
         REQUIRE(cpu.regs().p == 0x21);
+    }
+}
+
+TEST_CASE("M6507 6502 Opcode Integration and Addressing Modes", "[cpu][m6507][fast]") {
+    M6507 cpu;
+    auto bus = std::make_unique<Bus>();
+    auto ram = std::make_unique<Memory>(0x2000); // 8 KiB RAM
+    bus->attach(*ram, 0x0000, 0x2000);
+    cpu.setBus(bus.get());
+
+    SECTION("Zero-page addressing") {
+        cpu.reset();
+        ram->write(0x00FF, 0x42);
+
+        // LDA zp ($A5) reading from zp $FF
+        ram->write(0x0200, 0xA5);
+        ram->write(0x0201, 0xFF);
+        cpu.regs().pc = 0x0200;
+
+        cpu.step();
+        REQUIRE(cpu.regs().a == 0x42);
+    }
+
+    SECTION("Absolute addressing wrap") {
+        cpu.reset();
+        ram->write(0x0000, 0x99); // Address 0x4000 wraps to 0x0000
+
+        // LDA abs ($AD) reading from $4000 (wraps to 0x0000)
+        ram->write(0x0200, 0xAD);
+        ram->write(0x0201, 0x00);
+        ram->write(0x0202, 0x40);
+        cpu.regs().pc = 0x0200;
+
+        cpu.step();
+        REQUIRE(cpu.regs().a == 0x99);
+    }
+
+    SECTION("Absolute indexed addressing wrap") {
+        cpu.reset();
+        ram->write(0x0000, 0x77); // Address 0x3FFF + X (X=1) wraps to 0x0000
+        cpu.regs().x = 1;
+
+        // LDA abs,X ($BD) reading from $3FFF index X=1 (total 0x4000 -> wraps to 0x0000)
+        ram->write(0x0200, 0xBD);
+        ram->write(0x0201, 0xFF);
+        ram->write(0x0202, 0x3F);
+        cpu.regs().pc = 0x0200;
+
+        cpu.step();
+        REQUIRE(cpu.regs().a == 0x77);
+    }
+
+    SECTION("Indirect JMP wrap") {
+        cpu.reset();
+        // Setup JMP target (0x5678) at masked 0x3234/0x3235 (which maps to physical 0x1234/0x1235)
+        ram->write(0x1234, 0x78); // Target low
+        ram->write(0x1235, 0x56); // Target high
+
+        // JMP ($3234) -> opcode 0x6C
+        ram->write(0x0200, 0x6C);
+        ram->write(0x0201, 0x34);
+        ram->write(0x0202, 0x32);
+        cpu.regs().pc = 0x0200;
+
+        cpu.step();
+        REQUIRE(cpu.regs().pc == 0x5678);
     }
 }

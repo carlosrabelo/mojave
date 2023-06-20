@@ -77,7 +77,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 
 - [x] 8 KiB physical mirror wrap on every access (read/write/fetch/stack)
 - [x] External IRQ and NMI ignored; BRK reads vector from masked address
-- [ ] M6502 opcode test suite in the reduced address space
+- [x] M6502 opcode test suite in the reduced address space
 
 ## Session, CLI and clock
 
