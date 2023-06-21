@@ -81,7 +81,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 
 ## Session, CLI and clock
 
-- [ ] Virtual TTY (data/status registers, circular buffers; port and memory-mapped)
+- [x] Virtual TTY (data/status registers, circular buffers; port and memory-mapped)
 - [ ] Host binary loader (`--load-bin`)
 - [ ] `MojaveConfig` / `mojave.ini` (`[roms]` path aliases)
 - [ ] Session `runUntilHalt` with TTY polling
