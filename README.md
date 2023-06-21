@@ -41,6 +41,7 @@ mojave/              # Component root
 │   ├── cpus/
 │   ├── devices/
 │   ├── machines/
+│   ├── session/
 ├── tests/              # Catch2 suite (mirrors src/ layout)
 ├── lib/                # Vendored Catch2 header
 .make/               # Build scripts
