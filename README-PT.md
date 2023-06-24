@@ -4,7 +4,7 @@ Emulador multi-sistema ciclo-a-ciclo para computadores clássicos 8-bit.
 
 ## Destaques
 
-- Emulação de CPUs Z80, MOS 6502 com opcodes documentados e não documentados
+- Emulação de CPUs Z80, MOS 6502, MOS 6507 com opcodes documentados e não documentados
 - Barramento composto com espaços de endereçamento separados para memória e portas de I/O
 - Memória física com regiões ROM somente-leitura e segurança contra limites
 - Sistema de tick de dispositivos para temporização ciclo-a-ciclo de periféricos
