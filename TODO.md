@@ -86,7 +86,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 - [x] `MojaveConfig` / `mojave.ini` (`[roms]` path aliases)
 - [x] Session `runUntilHalt` with TTY polling
 - [x] CLI (`--machine`, `--dump-mem`, `--dump-reg`, `--help`, validation)
-- [ ] Builtin preset registry (contracts, factories, load-address aliases)
+- [x] Builtin preset registry (contracts, factories, load-address aliases)
 - [ ] Machine clock (0 Hz = unlimited) and real-time pacing
 - [ ] Frame runner (`stepForFrame` / pace) so halted CPUs still refresh video
 - [ ] Load address aliases (`rom` / `ram` per preset; omitted address uses contract default)
