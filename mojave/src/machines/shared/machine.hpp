@@ -24,11 +24,16 @@ public:
     Cpu& cpu() { return *cpu_; }
     const std::vector<std::unique_ptr<Device>>& ownedDevices() const { return owned_devices_; }
 
+    void setGuestCpuClockHz(uint32_t hz) { guest_cpu_clock_hz_ = hz; }
+    uint32_t guestCpuClockHz() const { return guest_cpu_clock_hz_; }
+
 private:
     std::unique_ptr<Cpu> cpu_;
     Bus bus_;
     std::vector<std::unique_ptr<Device>> owned_devices_;
     std::vector<Device*> tick_list_;
+    uint32_t guest_cpu_clock_hz_ = 0;
 };
+
 
 #endif
