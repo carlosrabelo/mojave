@@ -145,3 +145,35 @@ TEST_CASE("CLI rejects unknown alias", "[cli][fast]") {
 }
 
 
+TEST_CASE("CLI parses multiple --load-bin", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--load-bin", "a.bin", "0000", "--load-bin", "b.bin", "8000"};
+    auto opts = parseCLI(7, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads.size() == 2);
+    REQUIRE(opts.loads[0].address == 0x0000);
+    REQUIRE(opts.loads[1].address == 0x8000);
+}
+
+TEST_CASE("CLI hex address still works alongside aliases", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--load-bin", "a.bin", "rom", "--load-bin", "b.bin", "4000"};
+    auto opts = parseCLI(7, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads[0].address == 0x0000);
+    REQUIRE(opts.loads[1].address == 0x4000);
+}
+
+TEST_CASE("CLI multiple --load-bin preserves order", "[cli][fast]") {
+    const char* argv[] = {
+        "mojave",
+        "--load-bin", "third.bin", "8000",
+        "--load-bin", "first.bin", "0000",
+        "--load-bin", "second.bin", "4000"
+    };
+    auto opts = parseCLI(10, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads.size() == 3);
+    REQUIRE(opts.loads[0].path == "third.bin");
+    REQUIRE(opts.loads[1].path == "first.bin");
+    REQUIRE(opts.loads[2].path == "second.bin");
+}
+

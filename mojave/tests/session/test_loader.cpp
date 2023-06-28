@@ -46,6 +46,14 @@ TEST_CASE("Loader loads binary into read-only ROM via Bus", "[loader][fast]") {
     REQUIRE(rom.read(0) == 0x76);
 }
 
+TEST_CASE("Loader applies every --load-bin before execution starts", "[loader][fast]") {
+    auto [bus, ram] = createBusWithRam(0x0000, 0x0200);
+    REQUIRE(loader::loadBinary("tests/guests/z80/halt.bin", *bus, 0x0000));
+    REQUIRE(loader::loadBinary("tests/guests/z80/halt.bin", *bus, 0x0100));
+    REQUIRE(bus->read(0x0000) == 0x76);
+    REQUIRE(bus->read(0x0100) == 0x76);
+}
+
 TEST_CASE("Loader writes each byte to Bus sequentially via write()", "[loader][fast]") {
     Bus bus;
     Memory ram(16);

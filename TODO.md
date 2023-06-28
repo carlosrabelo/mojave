@@ -90,7 +90,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 - [x] Machine clock (0 Hz = unlimited) and real-time pacing
 - [x] Frame runner (`stepForFrame` / pace) so halted CPUs still refresh video
 - [x] Load address aliases (`rom` / `ram` per preset; omitted address uses contract default)
-- [ ] Multiple `--load-bin`; execution starts after all loads complete
+- [x] Multiple `--load-bin`; execution starts after all loads complete
 
 ## Virtual screens and frontends
 
