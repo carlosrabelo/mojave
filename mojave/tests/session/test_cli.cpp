@@ -110,3 +110,38 @@ TEST_CASE("CLI combined options parse correctly", "[cli][fast]") {
     REQUIRE(opts.memEnd == 0x0610);
 }
 
+TEST_CASE("CLI accepts --load-bin without address argument, defaulting to rom/boot address", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--load-bin", "rom.bin"};
+    auto opts = parseCLI(3, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads.size() == 1);
+    REQUIRE(opts.loads[0].path == "rom.bin");
+    REQUIRE(opts.loads[0].address == 0x0000);
+}
+
+
+TEST_CASE("CLI resolves rom alias for z80", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--load-bin", "code.bin", "rom"};
+    auto opts = parseCLI(4, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads[0].address == 0x0000);
+}
+
+TEST_CASE("CLI resolves ram alias for z80", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--load-bin", "code.bin", "ram"};
+    auto opts = parseCLI(4, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads[0].address == 0x8000);
+}
+
+
+
+
+TEST_CASE("CLI rejects unknown alias", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--load-bin", "code.bin", "bank2"};
+    auto opts = parseCLI(4, const_cast<char**>(argv));
+    REQUIRE_FALSE(opts.ok);
+    REQUIRE(opts.error.find("invalid address or alias") != std::string::npos);
+}
+
+

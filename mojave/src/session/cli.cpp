@@ -32,7 +32,17 @@ static bool isKnownMachine(const std::string& machine) {
     return machine == "z80";
 }
 
-static bool resolveAddr(const char* s, const std::string&, uint16_t& out) {
+static bool resolveAddr(const char* s, const std::string& machine, uint16_t& out) {
+    if (std::strcmp(s, "rom") == 0) {
+        if (machine == "z80")   { out = 0x0000; return true; }
+        if (machine == "m6502") { out = 0x0000; return true; }
+        if (machine == "m6507") { out = 0x1000; return true; }
+    }
+    if (std::strcmp(s, "ram") == 0) {
+        if (machine == "z80")   { out = 0x8000; return true; }
+        if (machine == "m6502") { out = 0x0000; return true; }
+        if (machine == "m6507") { out = 0x0000; return true; }
+    }
     return parseHex(s, out);
 }
 
@@ -86,12 +96,10 @@ CLIOptions parseCLI(int argc, char* argv[], const MojaveConfig& config) {
                 return opts;
             }
             std::string path = config.resolveLoadPath(argv[++i]);
-            if (i + 1 >= argc || argv[i + 1][0] == '-') {
-                opts.ok = false;
-                opts.error = "--load-bin requires a hex address";
-                return opts;
+            const char* addr_str = "rom";
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                addr_str = argv[++i];
             }
-            const char* addr_str = argv[++i];
             uint16_t addr;
             if (!resolveAddr(addr_str, opts.machine, addr)) {
                 opts.ok = false;
