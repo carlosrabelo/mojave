@@ -9,6 +9,7 @@ Cycle-accurate multi-system emulator for classic 8-bit computers.
 - Physical memory with read-only ROM regions and out-of-bounds safety
 - Device tick system for cycle-accurate timing of peripherals
 - Virtual TTY for guest-host I/O via port or memory mapping
+- Plug-in virtual screens: any display-capable machine writes to a shared framebuffer
 
 ## Prerequisites
 
