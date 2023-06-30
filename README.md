@@ -43,6 +43,7 @@ mojave/              # Component root
 │   ├── devices/
 │   ├── machines/
 │   ├── session/
+│   ├── frontend/
 ├── tests/              # Catch2 suite (mirrors src/ layout)
 ├── lib/                # Vendored Catch2 header
 .make/               # Build scripts

@@ -96,7 +96,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 
 - [x] Framebuffer interface (Device subclass, RGBA, dirty rects, snow fill)
 - [x] Screen registry (machines request a virtual screen by id, or none for headless)
-- [ ] Refresh helper so display machines redraw while the CPU is halted
+- [x] Refresh helper so display machines redraw while the CPU is halted
 - [ ] Host keyboard bridge (SDL/Qt6 dispatch into the current machine)
 - [ ] `mojave` TTY frontend — headless; basic presets `z80`, `m6502`, `m6507`
 - [ ] `mojave-sdl` — standalone virtual screen (snow pattern, `--vsd`, `--scale`)
