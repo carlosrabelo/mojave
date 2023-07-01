@@ -9,12 +9,14 @@ Cycle-accurate multi-system emulator for classic 8-bit computers.
 - Physical memory with read-only ROM regions and out-of-bounds safety
 - Device tick system for cycle-accurate timing of peripherals
 - Virtual TTY for guest-host I/O via port or memory mapping
+- SDL virtual screen (snow pattern, `--vsd` flag)
 - Plug-in virtual screens: any display-capable machine writes to a shared framebuffer
 
 ## Prerequisites
 
 - **C++20** compiler (g++ 12+ or clang 16+)
 - **make** — build system
+- **SDL2** development libraries — required for `mojave-sdl`
 
 ## Installation
 
@@ -25,12 +27,14 @@ git clone https://github.com/username/mojave.git
 cd mojave
 make setup          # Download Catch2 test header
 make build-tty      # Build the headless mojave binary
+make build-sdl      # Build mojave-sdl (requires SDL2)
 ```
 
 ## Usage
 
 ```bash
 bin/mojave --help                         # Show usage
+bin/mojave-sdl --vsd                      # Snow pattern demo, no machine
 ```
 
 ## Project Layout
@@ -60,6 +64,7 @@ make test-all        # Full suite (commit gate)
 make check           # Syntax check and isolation guard
 make quality         # Syntax check, build, and test
 make coverage        # Build and run tests with coverage report
+make build-sdl       # Build mojave-sdl (requires SDL2)
 ```
 
 ## License

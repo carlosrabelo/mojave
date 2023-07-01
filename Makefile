@@ -2,7 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 .DEFAULT_GOAL := help
 
-.PHONY: build-tty check clean coverage fmt help install-tty lint quality run-tty setup test-all test-changed test-fast uninstall-tty
+.PHONY: build-tty build-sdl check clean coverage fmt help install-tty install-sdl lint quality run-tty run-sdl setup test-all test-changed test-fast uninstall-tty uninstall-sdl
 
 help: ## Show available targets
 	@$(MAKE) -C mojave help
@@ -13,14 +13,26 @@ setup: ## Download dependencies (e.g. Catch2 header)
 build-tty: ## Compile mojave binary
 	@$(MAKE) -C mojave build-tty
 
+build-sdl: ## Compile mojave-sdl binary (requires libsdl2-dev)
+	@$(MAKE) -C mojave build-sdl
+
 install-tty: ## Install mojave
 	@$(MAKE) -C mojave install-tty
+
+install-sdl: ## Install mojave-sdl
+	@$(MAKE) -C mojave install-sdl
 
 uninstall-tty: ## Remove mojave
 	@$(MAKE) -C mojave uninstall-tty
 
+uninstall-sdl: ## Remove mojave-sdl
+	@$(MAKE) -C mojave uninstall-sdl
+
 run-tty: ## Run mojave
 	@$(MAKE) -C mojave run-tty
+
+run-sdl: ## Run mojave-sdl
+	@$(MAKE) -C mojave run-sdl
 
 test-all: ## Compile and run all tests
 	@$(MAKE) -C mojave test-all

@@ -2,7 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 .DEFAULT_GOAL := help
 
-.PHONY: build-tty check clean coverage fmt help install-tty lint quality run-tty setup test-all test-changed test-fast uninstall-tty
+.PHONY: build-tty build-sdl check clean coverage fmt help install-tty install-sdl lint quality run-tty run-sdl setup test-all test-changed test-fast uninstall-tty uninstall-sdl
 
 help: ## Show available targets
 	@echo "mojave - Available targets"
@@ -17,14 +17,26 @@ setup: ## Download dependencies
 build-tty: ## Compile mojave binary
 	@../.make/build-tty.sh
 
+build-sdl: ## Compile mojave-sdl binary (requires libsdl2-dev)
+	@../.make/build-sdl.sh
+
 install-tty: build-tty ## Install mojave
 	@BINARY_NAME=mojave PREFIX="$(PREFIX)" ../.make/install.sh
+
+install-sdl: build-sdl ## Install mojave-sdl
+	@BINARY_NAME=mojave-sdl PREFIX="$(PREFIX)" ../.make/install.sh
 
 uninstall-tty: ## Remove mojave
 	@BINARY_NAME=mojave PREFIX="$(PREFIX)" ../.make/uninstall.sh
 
+uninstall-sdl: ## Remove mojave-sdl
+	@BINARY_NAME=mojave-sdl PREFIX="$(PREFIX)" ../.make/uninstall.sh
+
 run-tty: build-tty ## Run mojave
 	@BINARY_NAME=mojave ../.make/run.sh $(ARGS)
+
+run-sdl: build-sdl ## Run mojave-sdl
+	@BINARY_NAME=mojave-sdl ../.make/run.sh $(ARGS)
 
 test-all: ## Compile and run all tests
 	@../.make/test-all.sh
