@@ -100,7 +100,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 - [x] Host keyboard bridge (SDL/Qt6 dispatch into the current machine)
 - [x] `mojave` TTY frontend — headless; basic presets `z80`, `m6502`, `m6507`
 - [x] `mojave-sdl` — standalone virtual screen (snow pattern, `--vsd`, `--scale`)
-- [ ] `mojave-qt6` — Qt6 MDI shell with an always-visible virtual screen widget
+- [x] `mojave-qt6` — Qt6 MDI shell with an always-visible virtual screen widget
 
 ## Basic presets
 

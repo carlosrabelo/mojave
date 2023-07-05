@@ -10,6 +10,7 @@ Emulador multi-sistema ciclo-a-ciclo para computadores clássicos 8-bit.
 - Sistema de tick de dispositivos para temporização ciclo-a-ciclo de periféricos
 - TTY virtual para I/O convidado-hospedeiro via mapeamento de porta ou memória
 - Tela virtual SDL (padrão de neve, flag `--vsd`)
+- Shell MDI Qt6 com widget de tela virtual embutido
 - Telas virtuais plugáveis: qualquer máquina com display escreve em um framebuffer compartilhado
 
 ## Pré-requisitos
@@ -17,6 +18,7 @@ Emulador multi-sistema ciclo-a-ciclo para computadores clássicos 8-bit.
 - **C++20** compilador (g++ 12+ or clang 16+)
 - **make** — sistema de build
 - **SDL2** bibliotecas de desenvolvimento — necessário para `mojave-sdl`
+- **Qt6** bibliotecas de desenvolvimento — necessário para `mojave-qt6`
 
 ## Licença
 

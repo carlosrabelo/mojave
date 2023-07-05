@@ -10,6 +10,7 @@ Cycle-accurate multi-system emulator for classic 8-bit computers.
 - Device tick system for cycle-accurate timing of peripherals
 - Virtual TTY for guest-host I/O via port or memory mapping
 - SDL virtual screen (snow pattern, `--vsd` flag)
+- Qt6 MDI host shell with built-in virtual screen widget
 - Plug-in virtual screens: any display-capable machine writes to a shared framebuffer
 
 ## Prerequisites
@@ -17,6 +18,7 @@ Cycle-accurate multi-system emulator for classic 8-bit computers.
 - **C++20** compiler (g++ 12+ or clang 16+)
 - **make** — build system
 - **SDL2** development libraries — required for `mojave-sdl`
+- **Qt6** development libraries — required for `mojave-qt6`
 
 ## Installation
 
@@ -28,6 +30,7 @@ cd mojave
 make setup          # Download Catch2 test header
 make build-tty      # Build the headless mojave binary
 make build-sdl      # Build mojave-sdl (requires SDL2)
+make build-qt6      # Build mojave-qt6 (requires Qt6)
 ```
 
 ## Usage
@@ -35,6 +38,7 @@ make build-sdl      # Build mojave-sdl (requires SDL2)
 ```bash
 bin/mojave --help                         # Show usage
 bin/mojave-sdl --vsd                      # Snow pattern demo, no machine
+bin/mojave-qt6                            # Qt6 MDI shell
 ```
 
 ## Project Layout
@@ -65,6 +69,7 @@ make check           # Syntax check and isolation guard
 make quality         # Syntax check, build, and test
 make coverage        # Build and run tests with coverage report
 make build-sdl       # Build mojave-sdl (requires SDL2)
+make build-qt6       # Build mojave-qt6 (requires Qt6)
 ```
 
 ## License
