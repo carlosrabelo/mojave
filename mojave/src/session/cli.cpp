@@ -9,7 +9,7 @@ static void usage() {
         "Usage: mojave [options]\n"
         "\n"
         "Options:\n"
-        "  --machine <name>       Machine preset name\n"
+        "  --machine <name>       Machine preset (z80)\n"
         "  --load-bin <path> [<addr>]\n"
         "                         Load binary at hex address/alias; path may be a [roms]\n"
         "                         alias from mojave.ini (defaults to boot/rom)\n"

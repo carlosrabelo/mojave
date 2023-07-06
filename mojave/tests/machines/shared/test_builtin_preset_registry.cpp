@@ -1,13 +1,54 @@
 #include "catch.hpp"
 #include "machines/shared/builtin_preset_registry.hpp"
 #include "machines/shared/machine.hpp"
+#include "devices/shared/framebuffer.hpp"
 
-TEST_CASE("Builtin preset registry is empty before presets land", "[machine][fast]") {
-    REQUIRE_FALSE(isBuiltinPresetId("z80"));
+TEST_CASE("Builtin preset registry lists supported presets", "[machine][fast]") {
+    REQUIRE(isBuiltinPresetId("z80"));
+    REQUIRE_FALSE(isBuiltinPresetId("m6502"));
     REQUIRE_FALSE(isBuiltinPresetId("missing"));
-    REQUIRE(findBuiltinPreset("z80") == nullptr);
-    REQUIRE(createBuiltinMachine("z80") == nullptr);
+}
+
+TEST_CASE("Builtin preset registry exposes descriptor metadata", "[machine][fast]") {
+    const auto* z80 = findBuiltinPreset("z80");
+    REQUIRE(z80 != nullptr);
+    REQUIRE(z80->includes_virtual_tty);
+    REQUIRE_FALSE(z80->needs_virtual_screen);
+}
+
+TEST_CASE("Builtin CPU presets create without a Framebuffer", "[machine][fast]") {
+    const auto* preset = findBuiltinPreset("z80");
+    REQUIRE(preset != nullptr);
+    REQUIRE_FALSE(preset->needs_virtual_screen);
+    REQUIRE(preset->includes_virtual_tty);
+
+    auto machine = createBuiltinMachine("z80");
+    REQUIRE(machine != nullptr);
+
+    bool has_framebuffer = false;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (dynamic_cast<Framebuffer*>(dev.get())) {
+            has_framebuffer = true;
+            break;
+        }
+    }
+    REQUIRE_FALSE(has_framebuffer);
+}
+
+TEST_CASE("Builtin preset registry creates machines", "[machine][fast]") {
+    REQUIRE(createBuiltinMachine("z80") != nullptr);
+    REQUIRE(createBuiltinMachine("missing") == nullptr);
+}
+
+TEST_CASE("Builtin preset registry help lists registered ids", "[machine][fast]") {
+    REQUIRE(formatBuiltinPresetIdsForHelp() == "z80");
+}
+
+TEST_CASE("Builtin preset registry resolves z80 load aliases", "[machine][fast]") {
     uint16_t addr = 0;
-    REQUIRE_FALSE(resolveBuiltinLoadAlias("z80", "rom", addr));
-    REQUIRE(formatBuiltinPresetIdsForHelp().empty());
+    REQUIRE(resolveBuiltinLoadAlias("z80", "rom", addr));
+    REQUIRE(addr == 0x0000);
+    REQUIRE(resolveBuiltinLoadAlias("z80", "ram", addr));
+    REQUIRE(addr == 0x8000);
+    REQUIRE_FALSE(resolveBuiltinLoadAlias("z80", "bank2", addr));
 }

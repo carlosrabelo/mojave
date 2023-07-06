@@ -106,7 +106,7 @@ Complete this section before `m6502` / `m6507` presets. M6507 reuses these handl
 
 Headless TTY machines. No `docs/machines/` entry.
 
-- [ ] `z80` — Z80, 64 KiB RAM, Virtual TTY (port I/O)
+- [x] `z80` — Z80, 64 KiB RAM, Virtual TTY (port I/O)
 - [ ] `m6502` — 6502, 64 KiB RAM, Virtual TTY at 0xFFE0; default load 0x0000
 - [ ] `m6507` — 6507, 8 KiB physical mirror, Virtual TTY at 0x1E00
 

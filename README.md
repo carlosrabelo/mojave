@@ -37,6 +37,8 @@ make build-qt6      # Build mojave-qt6 (requires Qt6)
 
 ```bash
 bin/mojave --help                         # Show usage
+bin/mojave --machine z80 --load-bin guest.bin  # Run headless
+bin/mojave-sdl --machine z80              # Run with virtual screen
 bin/mojave-sdl --vsd                      # Snow pattern demo, no machine
 bin/mojave-qt6                            # Qt6 MDI shell
 ```
