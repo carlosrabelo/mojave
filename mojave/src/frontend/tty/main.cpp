@@ -7,6 +7,7 @@
 #include "session/loader.hpp"
 #include "machines/shared/machine.hpp"
 #include "machines/z80/z80_preset.hpp"
+#include "machines/m6502/m6502_preset.hpp"
 #include "devices/shared/virtual_tty.hpp"
 
 int main(int argc, char* argv[]) {
@@ -23,6 +24,8 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<Machine> machine;
     if (opts.machine == "z80") {
         machine = createZ80Machine();
+    } else if (opts.machine == "m6502") {
+        machine = createM6502Machine();
     } else {
         std::fprintf(stderr, "Error: machine preset '%s' not supported or implemented yet.\n",
                      opts.machine.c_str());

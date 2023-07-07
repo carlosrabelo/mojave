@@ -11,4 +11,4 @@ coding.
 
 Implementation order and checkboxes live in `TODO.md` at the repository root.
 Preset isolation, device families, and naming conventions: [CONTRIBUTING.md](../../CONTRIBUTING.md) and [preset-layout.md](../shared/preset-layout.md).
-Basic CPU smoke presets (`z80`) are headless TTY machines and are not covered here.
+Basic CPU smoke presets (`z80`, `m6502`) are headless TTY machines and are not covered here.

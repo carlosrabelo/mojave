@@ -1,6 +1,7 @@
 #include "machines/shared/builtin_preset_registry.hpp"
 #include "machines/shared/machine.hpp"
 #include "machines/z80/z80_preset.hpp"
+#include "machines/m6502/m6502_preset.hpp"
 #include <cstring>
 
 namespace {
@@ -35,6 +36,18 @@ const BuiltinPresetEntry kPresets[] = {
             loadRegionsFromContract<Z80PresetContract>(),
         },
         createZ80Machine,
+    },
+    {
+        {
+            "m6502",
+            BuiltinCpuFamily::M6502,
+            true,
+            M6502PresetContract::includes_virtual_tty,
+            M6502PresetContract::needs_virtual_screen,
+            M6502PresetContract::guest_cpu_clock_hz,
+            loadRegionsFromContract<M6502PresetContract>(),
+        },
+        createM6502Machine,
     },
 };
 

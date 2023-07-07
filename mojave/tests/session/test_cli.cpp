@@ -26,10 +26,10 @@ TEST_CASE("CLI defaults to z80 machine and shows help on empty args", "[cli][fas
 }
 
 TEST_CASE("CLI parses --machine with valid name", "[cli][fast]") {
-    const char* argv[] = {"mojave", "--machine", "z80"};
+    const char* argv[] = {"mojave", "--machine", "m6502"};
     auto opts = parseCLI(3, const_cast<char**>(argv));
     REQUIRE(opts.ok);
-    REQUIRE(opts.machine == "z80");
+    REQUIRE(opts.machine == "m6502");
 }
 
 TEST_CASE("CLI rejects unknown machine", "[cli][fast]") {
