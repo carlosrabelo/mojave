@@ -93,14 +93,14 @@ TEST_CASE("CLI rejects unknown option", "[cli][fast]") {
 
 TEST_CASE("CLI combined options parse correctly", "[cli][fast]") {
     const char* argv[] = {
-        "mojave",
+        "mojave", "--machine", "m6507",
         "--load-bin", "code.bin", "0600",
         "--dump-reg",
         "--dump-mem", "0600", "0610"
     };
-    auto opts = parseCLI(8, const_cast<char**>(argv));
+    auto opts = parseCLI(10, const_cast<char**>(argv));
     REQUIRE(opts.ok);
-    REQUIRE(opts.machine == "z80");
+    REQUIRE(opts.machine == "m6507");
     REQUIRE(opts.loads.size() == 1);
     REQUIRE(opts.loads[0].path == "code.bin");
     REQUIRE(opts.loads[0].address == 0x0600);

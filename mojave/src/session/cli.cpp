@@ -9,7 +9,7 @@ static void usage() {
         "Usage: mojave [options]\n"
         "\n"
         "Options:\n"
-        "  --machine <name>       Machine preset (z80, m6502)\n"
+        "  --machine <name>       Machine preset (z80, m6502, m6507)\n"
         "  --load-bin <path> [<addr>]\n"
         "                         Load binary at hex address/alias; path may be a [roms]\n"
         "                         alias from mojave.ini (defaults to boot/rom)\n"
@@ -29,7 +29,7 @@ static bool parseHex(const char* s, uint16_t& out) {
 }
 
 static bool isKnownMachine(const std::string& machine) {
-    return machine == "z80" || machine == "m6502";
+    return machine == "z80" || machine == "m6502" || machine == "m6507";
 }
 
 static bool resolveAddr(const char* s, const std::string& machine, uint16_t& out) {

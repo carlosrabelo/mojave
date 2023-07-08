@@ -6,7 +6,8 @@
 TEST_CASE("Builtin preset registry lists supported presets", "[machine][fast]") {
     REQUIRE(isBuiltinPresetId("z80"));
     REQUIRE(isBuiltinPresetId("m6502"));
-    REQUIRE_FALSE(isBuiltinPresetId("m6507"));
+    REQUIRE(isBuiltinPresetId("m6507"));
+    REQUIRE_FALSE(isBuiltinPresetId("trs80m1l1"));
     REQUIRE_FALSE(isBuiltinPresetId("missing"));
 }
 
@@ -18,7 +19,7 @@ TEST_CASE("Builtin preset registry exposes descriptor metadata", "[machine][fast
 }
 
 TEST_CASE("Builtin CPU presets create without a Framebuffer", "[machine][fast]") {
-    for (const char* id : {"z80", "m6502"}) {
+    for (const char* id : {"z80", "m6502", "m6507"}) {
         const auto* preset = findBuiltinPreset(id);
         REQUIRE(preset != nullptr);
         REQUIRE_FALSE(preset->needs_virtual_screen);
@@ -41,11 +42,12 @@ TEST_CASE("Builtin CPU presets create without a Framebuffer", "[machine][fast]")
 TEST_CASE("Builtin preset registry creates machines", "[machine][fast]") {
     REQUIRE(createBuiltinMachine("z80") != nullptr);
     REQUIRE(createBuiltinMachine("m6502") != nullptr);
+    REQUIRE(createBuiltinMachine("m6507") != nullptr);
     REQUIRE(createBuiltinMachine("missing") == nullptr);
 }
 
 TEST_CASE("Builtin preset registry help lists registered ids", "[machine][fast]") {
-    REQUIRE(formatBuiltinPresetIdsForHelp() == "z80, m6502");
+    REQUIRE(formatBuiltinPresetIdsForHelp() == "z80, m6502, m6507");
 }
 
 TEST_CASE("Builtin preset registry resolves z80 load aliases", "[machine][fast]") {
@@ -57,6 +59,10 @@ TEST_CASE("Builtin preset registry resolves z80 load aliases", "[machine][fast]"
     REQUIRE(resolveBuiltinLoadAlias("m6502", "rom", addr));
     REQUIRE(addr == 0x0000);
     REQUIRE(resolveBuiltinLoadAlias("m6502", "ram", addr));
+    REQUIRE(addr == 0x0000);
+    REQUIRE(resolveBuiltinLoadAlias("m6507", "rom", addr));
+    REQUIRE(addr == 0x1000);
+    REQUIRE(resolveBuiltinLoadAlias("m6507", "ram", addr));
     REQUIRE(addr == 0x0000);
     REQUIRE_FALSE(resolveBuiltinLoadAlias("z80", "bank2", addr));
 }

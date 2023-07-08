@@ -8,6 +8,7 @@
 #include "machines/shared/machine.hpp"
 #include "machines/z80/z80_preset.hpp"
 #include "machines/m6502/m6502_preset.hpp"
+#include "machines/m6507/m6507_preset.hpp"
 #include "devices/shared/virtual_tty.hpp"
 
 int main(int argc, char* argv[]) {
@@ -26,12 +27,14 @@ int main(int argc, char* argv[]) {
         machine = createZ80Machine();
     } else if (opts.machine == "m6502") {
         machine = createM6502Machine();
+    } else if (opts.machine == "m6507") {
+        machine = createM6507Machine();
     } else {
-        std::fprintf(stderr, "Error: machine preset '%s' not supported or implemented yet.\n",
-                     opts.machine.c_str());
+        std::fprintf(stderr, "Error: machine preset '%s' not supported or implemented yet.\n", opts.machine.c_str());
         return 1;
     }
 
+    // Find the VirtualTTY device in the machine's owned devices
     VirtualTTY* tty = nullptr;
     for (const auto& dev : machine->ownedDevices()) {
         if (auto t = dynamic_cast<VirtualTTY*>(dev.get())) {
@@ -40,22 +43,23 @@ int main(int argc, char* argv[]) {
         }
     }
     if (!tty) {
-        std::fprintf(stderr, "Error: machine preset '%s' does not have a VirtualTTY device.\n",
-                     opts.machine.c_str());
+        std::fprintf(stderr, "Error: machine preset '%s' does not have a VirtualTTY device.\n", opts.machine.c_str());
         return 1;
     }
 
+    // Load binaries
     for (const auto& load : opts.loads) {
         if (!loader::loadBinary(load.path.c_str(), machine->bus(), load.address)) {
-            std::fprintf(stderr, "Error: failed to load binary file '%s' at address 0x%04X\n",
-                         load.path.c_str(), load.address);
+            std::fprintf(stderr, "Error: failed to load binary file '%s' at address 0x%04X\n", load.path.c_str(), load.address);
             return 1;
         }
     }
 
+    // Run session
     Session session(*machine, *tty);
     session.runUntilHalt();
 
+    // Dump memory if requested
     if (opts.dumpMem) {
         for (uint32_t addr = opts.memStart; addr <= opts.memEnd; ++addr) {
             if ((addr - opts.memStart) % 16 == 0) {
@@ -70,6 +74,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Dump registers if requested
     if (opts.dumpReg) {
         auto snap = machine->cpu().registers();
         for (const auto& entry : snap.entries) {
