@@ -12,6 +12,7 @@ Cycle-accurate multi-system emulator for classic 8-bit computers.
 - SDL virtual screen (snow pattern, `--vsd` flag)
 - Qt6 MDI host shell with built-in virtual screen widget
 - Plug-in virtual screens: any display-capable machine writes to a shared framebuffer
+- Machine profiles: TRS-80 Model I
 
 ## Prerequisites
 

@@ -12,6 +12,7 @@ Emulador multi-sistema ciclo-a-ciclo para computadores clássicos 8-bit.
 - Tela virtual SDL (padrão de neve, flag `--vsd`)
 - Shell MDI Qt6 com widget de tela virtual embutido
 - Telas virtuais plugáveis: qualquer máquina com display escreve em um framebuffer compartilhado
+- Perfis de máquina: TRS-80 Model I
 
 ## Pré-requisitos
 

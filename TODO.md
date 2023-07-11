@@ -114,7 +114,7 @@ Headless TTY machines. No `docs/machines/` entry.
 
 Family devices live under `devices/trs80m1/` (shared with Level II).
 
-- [ ] Hardware notes (`docs/machines/trs80m1.md`)
+- [x] Hardware notes (`docs/machines/trs80m1.md`)
 - [ ] Profile contract + memory map (4 KiB ROM, 4 KiB RAM; no expansion)
 - [ ] Video controller (64×16 text VRAM, character generator, uppercase, block graphics)
 - [ ] Memory-mapped printer status (0x37E8)
