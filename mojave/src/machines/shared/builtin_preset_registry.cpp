@@ -3,6 +3,7 @@
 #include "machines/z80/z80_preset.hpp"
 #include "machines/m6502/m6502_preset.hpp"
 #include "machines/m6507/m6507_preset.hpp"
+#include "machines/trs80m1l1/trs80m1l1_preset.hpp"
 #include <cstring>
 
 namespace {
@@ -61,6 +62,18 @@ const BuiltinPresetEntry kPresets[] = {
             loadRegionsFromContract<M6507PresetContract>(),
         },
         createM6507Machine,
+    },
+    {
+        {
+            "trs80m1l1",
+            BuiltinCpuFamily::Z80,
+            false,
+            Trs80M1L1PresetContract::includes_virtual_tty,
+            Trs80M1L1PresetContract::needs_virtual_screen,
+            Trs80M1L1PresetContract::guest_cpu_clock_hz,
+            loadRegionsFromContract<Trs80M1L1PresetContract>(),
+        },
+        createTrs80M1L1Machine,
     },
 };
 

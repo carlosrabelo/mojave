@@ -7,7 +7,8 @@ TEST_CASE("Builtin preset registry lists supported presets", "[machine][fast]") 
     REQUIRE(isBuiltinPresetId("z80"));
     REQUIRE(isBuiltinPresetId("m6502"));
     REQUIRE(isBuiltinPresetId("m6507"));
-    REQUIRE_FALSE(isBuiltinPresetId("trs80m1l1"));
+    REQUIRE(isBuiltinPresetId("trs80m1l1"));
+    REQUIRE_FALSE(isBuiltinPresetId("trs80m1l2"));
     REQUIRE_FALSE(isBuiltinPresetId("missing"));
 }
 
@@ -16,6 +17,12 @@ TEST_CASE("Builtin preset registry exposes descriptor metadata", "[machine][fast
     REQUIRE(z80 != nullptr);
     REQUIRE(z80->includes_virtual_tty);
     REQUIRE_FALSE(z80->needs_virtual_screen);
+
+    const auto* trs80m1l1 = findBuiltinPreset("trs80m1l1");
+    REQUIRE(trs80m1l1 != nullptr);
+    REQUIRE_FALSE(trs80m1l1->includes_virtual_tty);
+    REQUIRE(trs80m1l1->needs_virtual_screen);
+    REQUIRE(trs80m1l1->guest_cpu_clock_hz == 1'774'080u);
 }
 
 TEST_CASE("Builtin CPU presets create without a Framebuffer", "[machine][fast]") {
@@ -43,11 +50,12 @@ TEST_CASE("Builtin preset registry creates machines", "[machine][fast]") {
     REQUIRE(createBuiltinMachine("z80") != nullptr);
     REQUIRE(createBuiltinMachine("m6502") != nullptr);
     REQUIRE(createBuiltinMachine("m6507") != nullptr);
+    REQUIRE(createBuiltinMachine("trs80m1l1") != nullptr);
     REQUIRE(createBuiltinMachine("missing") == nullptr);
 }
 
 TEST_CASE("Builtin preset registry help lists registered ids", "[machine][fast]") {
-    REQUIRE(formatBuiltinPresetIdsForHelp() == "z80, m6502, m6507");
+    REQUIRE(formatBuiltinPresetIdsForHelp() == "z80, m6502, m6507, trs80m1l1");
 }
 
 TEST_CASE("Builtin preset registry resolves z80 load aliases", "[machine][fast]") {
@@ -64,5 +72,9 @@ TEST_CASE("Builtin preset registry resolves z80 load aliases", "[machine][fast]"
     REQUIRE(addr == 0x1000);
     REQUIRE(resolveBuiltinLoadAlias("m6507", "ram", addr));
     REQUIRE(addr == 0x0000);
+    REQUIRE(resolveBuiltinLoadAlias("trs80m1l1", "rom", addr));
+    REQUIRE(addr == 0x0000);
+    REQUIRE(resolveBuiltinLoadAlias("trs80m1l1", "ram", addr));
+    REQUIRE(addr == 0x4000);
     REQUIRE_FALSE(resolveBuiltinLoadAlias("z80", "bank2", addr));
 }

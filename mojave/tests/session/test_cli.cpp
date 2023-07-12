@@ -145,6 +145,27 @@ TEST_CASE("CLI rejects unknown alias", "[cli][fast]") {
 }
 
 
+TEST_CASE("CLI accepts trs80m1l1 machine preset", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--machine", "trs80m1l1"};
+    auto opts = parseCLI(3, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.machine == "trs80m1l1");
+}
+
+TEST_CASE("CLI resolves rom alias for trs80m1l1", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--machine", "trs80m1l1", "--load-bin", "code.bin", "rom"};
+    auto opts = parseCLI(6, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads[0].address == 0x0000);
+}
+
+TEST_CASE("CLI resolves ram alias for trs80m1l1", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--machine", "trs80m1l1", "--load-bin", "code.bin", "ram"};
+    auto opts = parseCLI(6, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads[0].address == 0x4000);
+}
+
 TEST_CASE("CLI parses multiple --load-bin", "[cli][fast]") {
     const char* argv[] = {"mojave", "--load-bin", "a.bin", "0000", "--load-bin", "b.bin", "8000"};
     auto opts = parseCLI(7, const_cast<char**>(argv));
