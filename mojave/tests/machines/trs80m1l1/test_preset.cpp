@@ -51,6 +51,15 @@ TEST_CASE("TRS-80 Model I Level I machine maps 4 KiB ROM and 4 KiB RAM", "[machi
     REQUIRE(machine->bus().read(0x4FFF) == 0x22);
 }
 
+TEST_CASE("TRS-80 Model I Level I machine maps 64x16 VRAM at 0x3C00", "[machine][trs80m1l1][fast]") {
+    auto machine = createTrs80M1L1Machine();
+
+    machine->bus().write(Contract::vram_start, 'H');
+    REQUIRE(machine->bus().read(Contract::vram_start) == 'H');
+    machine->bus().write(Contract::vram_end_exclusive - 1, 'I');
+    REQUIRE(machine->bus().read(Contract::vram_end_exclusive - 1) == 'I');
+}
+
 TEST_CASE("TRS-80 Model I Level I unmapped regions read as floating bus 0xFF", "[machine][trs80m1l1][fast]") {
     auto machine = createTrs80M1L1Machine();
 

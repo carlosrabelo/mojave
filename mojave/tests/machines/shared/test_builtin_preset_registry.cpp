@@ -50,7 +50,16 @@ TEST_CASE("Builtin preset registry creates machines", "[machine][fast]") {
     REQUIRE(createBuiltinMachine("z80") != nullptr);
     REQUIRE(createBuiltinMachine("m6502") != nullptr);
     REQUIRE(createBuiltinMachine("m6507") != nullptr);
-    REQUIRE(createBuiltinMachine("trs80m1l1") != nullptr);
+    auto trs80m1l1 = createBuiltinMachine("trs80m1l1");
+    REQUIRE(trs80m1l1 != nullptr);
+    bool has_framebuffer = false;
+    for (const auto& dev : trs80m1l1->ownedDevices()) {
+        if (dynamic_cast<Framebuffer*>(dev.get())) {
+            has_framebuffer = true;
+            break;
+        }
+    }
+    REQUIRE(has_framebuffer);
     REQUIRE(createBuiltinMachine("missing") == nullptr);
 }
 
