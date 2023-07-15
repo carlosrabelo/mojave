@@ -4,6 +4,7 @@
 #include "devices/shared/memory.hpp"
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m1/video_controller.hpp"
+#include "devices/trs80m1/printer_status.hpp"
 
 namespace {
 
@@ -20,6 +21,10 @@ std::unique_ptr<Machine> createTrs80M1L1Machine() {
 
     auto ram = std::make_unique<Memory>(Contract::ram_end_exclusive - Contract::ram_start);
     machine->attachDevice(std::move(ram), Contract::ram_start, Contract::ram_end_exclusive);
+
+    auto printer = std::make_unique<Trs80M1PrinterStatus>();
+    machine->attachDevice(std::move(printer), Contract::printer_status_address,
+                          static_cast<uint16_t>(Contract::printer_status_address + 1));
 
     auto fb = std::make_unique<Framebuffer>(Trs80M1VideoController::kFramebufferWidth,
                                             Trs80M1VideoController::kFramebufferHeight);

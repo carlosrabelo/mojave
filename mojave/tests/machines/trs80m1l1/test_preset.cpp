@@ -3,6 +3,7 @@
 #include "machines/trs80m1l1/trs80m1l1_preset.hpp"
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
+#include "devices/trs80m1/printer_status.hpp"
 
 using Contract = Trs80M1L1PresetContract;
 
@@ -58,6 +59,14 @@ TEST_CASE("TRS-80 Model I Level I machine maps 64x16 VRAM at 0x3C00", "[machine]
     REQUIRE(machine->bus().read(Contract::vram_start) == 'H');
     machine->bus().write(Contract::vram_end_exclusive - 1, 'I');
     REQUIRE(machine->bus().read(Contract::vram_end_exclusive - 1) == 'I');
+}
+
+TEST_CASE("TRS-80 Model I Level I machine maps printer status at 0x37E8", "[machine][trs80m1l1][fast]") {
+    auto machine = createTrs80M1L1Machine();
+
+    REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M1PrinterStatus::kIdleReadValue);
+    machine->bus().write(Contract::printer_status_address, 0x55);
+    REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M1PrinterStatus::kIdleReadValue);
 }
 
 TEST_CASE("TRS-80 Model I Level I unmapped regions read as floating bus 0xFF", "[machine][trs80m1l1][fast]") {

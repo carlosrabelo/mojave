@@ -117,7 +117,7 @@ Family devices live under `devices/trs80m1/` (shared with Level II).
 - [x] Hardware notes (`docs/machines/trs80m1.md`)
 - [x] Profile contract + memory map (4 KiB ROM, 4 KiB RAM; no expansion)
 - [x] Video controller (64×16 text VRAM, character generator, uppercase, block graphics)
-- [ ] Memory-mapped printer status (0x37E8)
+- [x] Memory-mapped printer status (0x37E8)
 - [ ] Port 0xFF decode (cassette bits idle, 32-column screen mode)
 - [ ] Keyboard matrix device (8 row addresses; no CONTROL/CAPS LOCK)
 - [ ] Machine clock 1.774 MHz
@@ -132,7 +132,7 @@ Reuse `devices/trs80m1/`; Level II-only expansion stays under `devices/trs80m1l2
 
 - [ ] Profile contract + memory map (12 KiB ROM, 16 KiB base RAM, expansion to 48 KiB)
 - [ ] Video controller (reuse Model I family: 64×16, uppercase, block graphics)
-- [ ] Memory-mapped printer status (0x37E8)
+- [x] Memory-mapped printer status (0x37E8)
 - [ ] Port 0xFF decode (cassette bits idle, 32-column screen mode)
 - [ ] Keyboard matrix device (reuse Model I family)
 - [ ] Wire keyboard matrix to SDL/Qt6 host input
