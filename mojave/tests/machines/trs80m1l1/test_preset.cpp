@@ -5,6 +5,7 @@
 #include "cpus/z80.hpp"
 #include "devices/trs80m1/printer_status.hpp"
 #include "devices/trs80m1/system_port.hpp"
+#include "devices/trs80m1/keyboard.hpp"
 
 using Contract = Trs80M1L1PresetContract;
 
@@ -87,6 +88,24 @@ TEST_CASE("TRS-80 Model I Level I machine decodes system port at 0xFF", "[machin
     REQUIRE(port != nullptr);
     REQUIRE(port->motorOn());
     REQUIRE(port->wideScreen());
+}
+
+TEST_CASE("TRS-80 Model I Level I machine maps keyboard matrix at 0x3800", "[machine][trs80m1l1][fast]") {
+    auto machine = createTrs80M1L1Machine();
+
+    Trs80M1Keyboard* keyboard = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M1Keyboard*>(dev.get())) {
+            keyboard = found;
+            break;
+        }
+    }
+    REQUIRE(keyboard != nullptr);
+
+    keyboard->pressNamedKey('B');
+    REQUIRE(machine->bus().read(Trs80M1Keyboard::rowAddress(0)) == 0x04);
+    keyboard->releaseNamedKey('B');
+    REQUIRE(machine->bus().read(Trs80M1Keyboard::rowAddress(0)) == 0x00);
 }
 
 TEST_CASE("TRS-80 Model I Level I unmapped regions read as floating bus 0xFF", "[machine][trs80m1l1][fast]") {

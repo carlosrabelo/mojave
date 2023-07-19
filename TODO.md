@@ -119,7 +119,7 @@ Family devices live under `devices/trs80m1/` (shared with Level II).
 - [x] Video controller (64×16 text VRAM, character generator, uppercase, block graphics)
 - [x] Memory-mapped printer status (0x37E8)
 - [x] Port 0xFF decode (cassette bits idle, 32-column screen mode)
-- [ ] Keyboard matrix device (8 row addresses; no CONTROL/CAPS LOCK)
+- [x] Keyboard matrix device (8 row addresses; no CONTROL/CAPS LOCK)
 - [ ] Machine clock 1.774 MHz
 - [ ] Plug into SDL/Qt6 virtual screen
 - [ ] Wire keyboard matrix to SDL/Qt6 host input
