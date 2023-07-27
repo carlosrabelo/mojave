@@ -2,6 +2,8 @@
 #define MOJAVE_MACHINE_KEYBOARD_BRIDGE_HPP
 
 #include <optional>
+#include <variant>
+#include "machines/trs80m1l1/trs80_host_keyboard_bridge.hpp"
 
 class Machine;
 class QKeyEvent;
@@ -15,7 +17,9 @@ public:
     bool handleQtKeyEvent(QKeyEvent* event, Machine* machine = nullptr);
 
 private:
-    MachineKeyboardBridge() = default;
+    explicit MachineKeyboardBridge(Trs80HostKeyboardBridge bridge);
+
+    std::variant<Trs80HostKeyboardBridge> bridge_;
 };
 
 #endif

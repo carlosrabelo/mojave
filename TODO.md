@@ -122,7 +122,7 @@ Family devices live under `devices/trs80m1/` (shared with Level II).
 - [x] Keyboard matrix device (8 row addresses; no CONTROL/CAPS LOCK)
 - [x] Machine clock 1.774 MHz
 - [x] Plug into SDL/Qt6 virtual screen
-- [ ] Wire keyboard matrix to SDL/Qt6 host input
+- [x] Wire keyboard matrix to SDL/Qt6 host input
 - [ ] Host layout keyboard typing (SDL/Qt6)
 - [ ] 32-column text mode
 
