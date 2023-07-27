@@ -123,7 +123,7 @@ Family devices live under `devices/trs80m1/` (shared with Level II).
 - [x] Machine clock 1.774 MHz
 - [x] Plug into SDL/Qt6 virtual screen
 - [x] Wire keyboard matrix to SDL/Qt6 host input
-- [ ] Host layout keyboard typing (SDL/Qt6)
+- [x] Host layout keyboard typing (SDL/Qt6)
 - [ ] 32-column text mode
 
 ## TRS-80 Model I Level II (`trs80m1l2`)
