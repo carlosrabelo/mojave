@@ -6,6 +6,8 @@
 #include "devices/trs80m1/printer_status.hpp"
 #include "devices/trs80m1/system_port.hpp"
 #include "devices/trs80m1/keyboard.hpp"
+#include "devices/trs80m1/video_controller.hpp"
+#include "devices/shared/framebuffer.hpp"
 
 using Contract = Trs80M1L1PresetContract;
 
@@ -126,4 +128,28 @@ TEST_CASE("TRS-80 Model I Level I has no expansion RAM above base map", "[machin
     REQUIRE(machine->bus().read(0x8000) == 0xFF);
     machine->bus().write(0xFFFF, 0xDD);
     REQUIRE(machine->bus().read(0xFFFF) == 0xFF);
+}
+
+TEST_CASE("TRS-80 Model I Level I 32-column text mode via system port", "[machine][trs80m1l1][fast]") {
+    auto machine = createTrs80M1L1Machine();
+
+    Framebuffer* fb = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Framebuffer*>(dev.get())) {
+            fb = found;
+            break;
+        }
+    }
+    REQUIRE(fb != nullptr);
+
+    machine->bus().writePort(Trs80M1SystemPort::kPort, Trs80M1SystemPort::kWideScreenMask);
+    machine->bus().write(Contract::vram_start, 'A');
+    REQUIRE(fb->getPixel(3, 2) == 0xFFFFFFFFu);
+    REQUIRE(fb->getPixel(4, 2) == 0xFFFFFFFFu);
+    REQUIRE(fb->getPixel(5, 2) == 0xFFFFFFFFu);
+
+    const uint16_t hidden_column = static_cast<uint16_t>(Contract::vram_start + 32);
+    machine->bus().write(hidden_column, 'B');
+    REQUIRE(machine->bus().read(hidden_column) == 'B');
+    REQUIRE(fb->getPixel(Trs80M1VideoController::kFramebufferWidth - 1, 0) == 0xFF000000u);
 }
