@@ -9,7 +9,7 @@ static void usage() {
         "Usage: mojave [options]\n"
         "\n"
         "Options:\n"
-        "  --machine <name>       Machine preset (z80, m6502, m6507, trs80m1l1)\n"
+        "  --machine <name>       Machine preset (z80, m6502, m6507, trs80m1l1, trs80m1l2)\n"
         "  --load-bin <path> [<addr>]\n"
         "                         Load binary at hex address/alias; path may be a [roms]\n"
         "                         alias from mojave.ini (defaults to boot/rom)\n"
@@ -30,7 +30,7 @@ static bool parseHex(const char* s, uint16_t& out) {
 
 static bool isKnownMachine(const std::string& machine) {
     return machine == "z80" || machine == "m6502" || machine == "m6507" ||
-           machine == "trs80m1l1";
+           machine == "trs80m1l1" || machine == "trs80m1l2";
 }
 
 static bool resolveAddr(const char* s, const std::string& machine, uint16_t& out) {
@@ -39,12 +39,14 @@ static bool resolveAddr(const char* s, const std::string& machine, uint16_t& out
         if (machine == "m6502") { out = 0x0000; return true; }
         if (machine == "m6507")     { out = 0x1000; return true; }
         if (machine == "trs80m1l1") { out = 0x0000; return true; }
+        if (machine == "trs80m1l2") { out = 0x0000; return true; }
     }
     if (std::strcmp(s, "ram") == 0) {
         if (machine == "z80")       { out = 0x8000; return true; }
         if (machine == "m6502")     { out = 0x0000; return true; }
         if (machine == "m6507")     { out = 0x0000; return true; }
         if (machine == "trs80m1l1") { out = 0x4000; return true; }
+        if (machine == "trs80m1l2") { out = 0x4000; return true; }
     }
     return parseHex(s, out);
 }
