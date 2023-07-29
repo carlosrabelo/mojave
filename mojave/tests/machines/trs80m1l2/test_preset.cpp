@@ -4,6 +4,7 @@
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
 #include "devices/trs80m1/video_controller.hpp"
+#include "devices/trs80m1/printer_status.hpp"
 #include "devices/shared/framebuffer.hpp"
 
 using Contract = Trs80M1L2PresetContract;
@@ -122,4 +123,12 @@ TEST_CASE("TRS-80 Model I Level II video controller renders block graphics", "[m
     REQUIRE(fb->getPixel(1, 1) == 0xFFFFFFFFu);
     REQUIRE(fb->getPixel(2, 3) == 0xFFFFFFFFu);
     REQUIRE(fb->getPixel(4, 0) == 0xFF000000u);
+}
+
+TEST_CASE("TRS-80 Model I Level II machine maps printer status at 0x37E8", "[machine][trs80m1l2][fast]") {
+    auto machine = createTrs80M1L2Machine();
+
+    REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M1PrinterStatus::kIdleReadValue);
+    machine->bus().write(Contract::printer_status_address, 0x55);
+    REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M1PrinterStatus::kIdleReadValue);
 }
