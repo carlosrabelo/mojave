@@ -3,6 +3,8 @@
 #include "machines/trs80m1l2/trs80m1l2_preset.hpp"
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
+#include "devices/trs80m1/video_controller.hpp"
+#include "devices/shared/framebuffer.hpp"
 
 using Contract = Trs80M1L2PresetContract;
 
@@ -67,4 +69,57 @@ TEST_CASE("TRS-80 Model I Level II unmapped regions read as floating bus 0xFF", 
 
     machine->bus().write(0x3500, 0x55);
     REQUIRE(machine->bus().read(0x3500) == 0xFF);
+}
+
+TEST_CASE("TRS-80 Model I Level II machine maps 64x16 VRAM at 0x3C00", "[machine][trs80m1l2][fast]") {
+    auto machine = createTrs80M1L2Machine();
+
+    machine->bus().write(Contract::vram_start, 'H');
+    REQUIRE(machine->bus().read(Contract::vram_start) == 'H');
+    machine->bus().write(Contract::vram_end_exclusive - 1, 'I');
+    REQUIRE(machine->bus().read(Contract::vram_end_exclusive - 1) == 'I');
+}
+
+TEST_CASE("TRS-80 Model I Level II video controller renders uppercase text", "[machine][trs80m1l2][fast]") {
+    auto machine = createTrs80M1L2Machine();
+
+    Framebuffer* fb = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Framebuffer*>(dev.get())) {
+            fb = found;
+            break;
+        }
+    }
+    REQUIRE(fb != nullptr);
+    REQUIRE(fb->width() == Trs80M1VideoController::kFramebufferWidth);
+    REQUIRE(fb->height() == Trs80M1VideoController::kFramebufferHeight);
+
+    machine->reset();
+    REQUIRE(fb->getPixel(0, 0) == 0xFF000000u);
+
+    machine->bus().write(Contract::vram_start, 'A');
+    REQUIRE(fb->getPixel(2, 2) == 0xFFFFFFFFu);
+    REQUIRE(fb->getPixel(3, 5) == 0xFFFFFFFFu);
+
+    machine->bus().write(static_cast<uint16_t>(Contract::vram_start + 1), 'a');
+    REQUIRE(fb->getPixel(8, 2) == 0xFFFFFFFFu);
+}
+
+TEST_CASE("TRS-80 Model I Level II video controller renders block graphics", "[machine][trs80m1l2][fast]") {
+    auto machine = createTrs80M1L2Machine();
+
+    Framebuffer* fb = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Framebuffer*>(dev.get())) {
+            fb = found;
+            break;
+        }
+    }
+    REQUIRE(fb != nullptr);
+
+    machine->reset();
+    machine->bus().write(Contract::vram_start, 129);
+    REQUIRE(fb->getPixel(1, 1) == 0xFFFFFFFFu);
+    REQUIRE(fb->getPixel(2, 3) == 0xFFFFFFFFu);
+    REQUIRE(fb->getPixel(4, 0) == 0xFF000000u);
 }
