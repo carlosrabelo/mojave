@@ -133,7 +133,7 @@ Reuse `devices/trs80m1/`; Level II-only expansion stays under `devices/trs80m1l2
 - [x] Profile contract + memory map (12 KiB ROM, 16 KiB base RAM, expansion to 48 KiB)
 - [x] Video controller (reuse Model I family: 64×16, uppercase, block graphics)
 - [x] Memory-mapped printer status (0x37E8)
-- [ ] Port 0xFF decode (cassette bits idle, 32-column screen mode)
+- [x] Port 0xFF decode (cassette bits idle, 32-column screen mode)
 - [ ] Keyboard matrix device (reuse Model I family)
 - [ ] Wire keyboard matrix to SDL/Qt6 host input
 - [ ] Machine clock 1.774 MHz

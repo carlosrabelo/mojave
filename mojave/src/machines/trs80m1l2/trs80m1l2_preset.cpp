@@ -5,6 +5,7 @@
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m1/video_controller.hpp"
 #include "devices/trs80m1/printer_status.hpp"
+#include "devices/trs80m1/system_port.hpp"
 
 namespace {
 
@@ -32,7 +33,13 @@ std::unique_ptr<Machine> createTrs80M1L2Machine() {
     machine->addOwnedDevice(std::move(fb));
 
     auto video = std::make_unique<Trs80M1VideoController>(*fb_ptr);
+    Trs80M1VideoController* video_ptr = video.get();
     machine->attachDevice(std::move(video), Contract::vram_start, Contract::vram_end_exclusive);
+
+    auto system_port = std::make_unique<Trs80M1SystemPort>(*video_ptr);
+    machine->bus().attachPort(*system_port, Contract::system_port,
+                              static_cast<uint16_t>(Contract::system_port + 1));
+    machine->addOwnedDevice(std::move(system_port));
 
     return machine;
 }

@@ -5,6 +5,7 @@
 #include "cpus/z80.hpp"
 #include "devices/trs80m1/video_controller.hpp"
 #include "devices/trs80m1/printer_status.hpp"
+#include "devices/trs80m1/system_port.hpp"
 #include "devices/shared/framebuffer.hpp"
 
 using Contract = Trs80M1L2PresetContract;
@@ -131,4 +132,23 @@ TEST_CASE("TRS-80 Model I Level II machine maps printer status at 0x37E8", "[mac
     REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M1PrinterStatus::kIdleReadValue);
     machine->bus().write(Contract::printer_status_address, 0x55);
     REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M1PrinterStatus::kIdleReadValue);
+}
+
+TEST_CASE("TRS-80 Model I Level II machine decodes system port at 0xFF", "[machine][trs80m1l2][fast]") {
+    auto machine = createTrs80M1L2Machine();
+
+    machine->bus().writePort(Contract::system_port, 0x07);
+    REQUIRE(machine->bus().readPort(Contract::system_port) == Trs80M1SystemPort::kIdleCassetteRead);
+
+    machine->bus().writePort(Contract::system_port, 0x0F);
+    Trs80M1SystemPort* port = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M1SystemPort*>(dev.get())) {
+            port = found;
+            break;
+        }
+    }
+    REQUIRE(port != nullptr);
+    REQUIRE(port->motorOn());
+    REQUIRE(port->wideScreen());
 }
