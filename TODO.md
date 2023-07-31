@@ -135,7 +135,7 @@ Reuse `devices/trs80m1/`; Level II-only expansion stays under `devices/trs80m1l2
 - [x] Memory-mapped printer status (0x37E8)
 - [x] Port 0xFF decode (cassette bits idle, 32-column screen mode)
 - [x] Keyboard matrix device (reuse Model I family)
-- [ ] Wire keyboard matrix to SDL/Qt6 host input
+- [x] Wire keyboard matrix to SDL/Qt6 host input
 - [ ] Machine clock 1.774 MHz
 - [ ] Plug into SDL/Qt6 virtual screen
 - [ ] Host layout keyboard typing (SDL/Qt6)
