@@ -6,6 +6,7 @@
 #include "devices/trs80m1/video_controller.hpp"
 #include "devices/trs80m1/printer_status.hpp"
 #include "devices/trs80m1/system_port.hpp"
+#include "devices/trs80m1/keyboard.hpp"
 
 namespace {
 
@@ -26,6 +27,9 @@ std::unique_ptr<Machine> createTrs80M1L2Machine() {
     auto printer = std::make_unique<Trs80M1PrinterStatus>();
     machine->attachDevice(std::move(printer), Contract::printer_status_address,
                           static_cast<uint16_t>(Contract::printer_status_address + 1));
+
+    auto keyboard = std::make_unique<Trs80M1Keyboard>();
+    machine->attachDevice(std::move(keyboard), Contract::keyboard_start, Contract::keyboard_end_exclusive);
 
     auto fb = std::make_unique<Framebuffer>(Trs80M1VideoController::kFramebufferWidth,
                                             Trs80M1VideoController::kFramebufferHeight);

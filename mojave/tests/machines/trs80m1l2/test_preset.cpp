@@ -6,6 +6,7 @@
 #include "devices/trs80m1/video_controller.hpp"
 #include "devices/trs80m1/printer_status.hpp"
 #include "devices/trs80m1/system_port.hpp"
+#include "devices/trs80m1/keyboard.hpp"
 #include "devices/shared/framebuffer.hpp"
 
 using Contract = Trs80M1L2PresetContract;
@@ -66,6 +67,7 @@ TEST_CASE("TRS-80 Model I Level II unmapped regions read as floating bus 0xFF", 
 
     REQUIRE(machine->bus().read(0x3000) == 0xFF);
     REQUIRE(machine->bus().read(0x37E0) == 0xFF);
+    REQUIRE(machine->bus().read(0x3800) == 0x00);
     REQUIRE(machine->bus().read(0x8000) == 0xFF);
     REQUIRE(machine->bus().read(0xFFFF) == 0xFF);
 
@@ -151,4 +153,22 @@ TEST_CASE("TRS-80 Model I Level II machine decodes system port at 0xFF", "[machi
     REQUIRE(port != nullptr);
     REQUIRE(port->motorOn());
     REQUIRE(port->wideScreen());
+}
+
+TEST_CASE("TRS-80 Model I Level II machine maps keyboard matrix at 0x3800", "[machine][trs80m1l2][fast]") {
+    auto machine = createTrs80M1L2Machine();
+
+    Trs80M1Keyboard* keyboard = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M1Keyboard*>(dev.get())) {
+            keyboard = found;
+            break;
+        }
+    }
+    REQUIRE(keyboard != nullptr);
+
+    keyboard->pressNamedKey('B');
+    REQUIRE(machine->bus().read(Trs80M1Keyboard::rowAddress(0)) == 0x04);
+    keyboard->releaseNamedKey('B');
+    REQUIRE(machine->bus().read(Trs80M1Keyboard::rowAddress(0)) == 0x00);
 }
