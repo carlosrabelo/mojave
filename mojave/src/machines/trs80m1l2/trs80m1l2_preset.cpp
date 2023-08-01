@@ -17,6 +17,7 @@ using Contract = Trs80M1L2PresetContract;
 std::unique_ptr<Machine> createTrs80M1L2Machine() {
     auto cpu = std::make_unique<Z80>();
     auto machine = std::make_unique<Machine>(std::move(cpu));
+    machine->setGuestCpuClockHz(Contract::guest_cpu_clock_hz);
 
     auto rom = std::make_unique<Memory>(Contract::rom_end_exclusive - Contract::rom_start, true);
     machine->attachDevice(std::move(rom), Contract::rom_start, Contract::rom_end_exclusive);
