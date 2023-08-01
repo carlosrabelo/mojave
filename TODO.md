@@ -137,7 +137,7 @@ Reuse `devices/trs80m1/`; Level II-only expansion stays under `devices/trs80m1l2
 - [x] Keyboard matrix device (reuse Model I family)
 - [x] Wire keyboard matrix to SDL/Qt6 host input
 - [x] Machine clock 1.774 MHz
-- [ ] Plug into SDL/Qt6 virtual screen
+- [x] Plug into SDL/Qt6 virtual screen
 - [ ] Host layout keyboard typing (SDL/Qt6)
 - [ ] Expansion RAM map (32 KiB at 0x8000)
 - [ ] Expansion interface port decode (E8h–EFh printer and serial idle stub)
