@@ -32,6 +32,11 @@ std::unique_ptr<Machine> createTrs80M1L2Machine() {
     auto keyboard = std::make_unique<Trs80M1Keyboard>();
     machine->attachDevice(std::move(keyboard), Contract::keyboard_start, Contract::keyboard_end_exclusive);
 
+    auto expansion_ram =
+        std::make_unique<Memory>(Contract::expansion_ram_end_exclusive - Contract::expansion_ram_start);
+    machine->attachDevice(std::move(expansion_ram), Contract::expansion_ram_start,
+                          Contract::expansion_ram_bus_end);
+
     auto fb = std::make_unique<Framebuffer>(Trs80M1VideoController::kFramebufferWidth,
                                             Trs80M1VideoController::kFramebufferHeight);
     Framebuffer* fb_ptr = fb.get();

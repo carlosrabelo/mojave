@@ -68,8 +68,6 @@ TEST_CASE("TRS-80 Model I Level II unmapped regions read as floating bus 0xFF", 
     REQUIRE(machine->bus().read(0x3000) == 0xFF);
     REQUIRE(machine->bus().read(0x37E0) == 0xFF);
     REQUIRE(machine->bus().read(0x3800) == 0x00);
-    REQUIRE(machine->bus().read(0x8000) == 0xFF);
-    REQUIRE(machine->bus().read(0xFFFF) == 0xFF);
 
     machine->bus().write(0x3500, 0x55);
     REQUIRE(machine->bus().read(0x3500) == 0xFF);
