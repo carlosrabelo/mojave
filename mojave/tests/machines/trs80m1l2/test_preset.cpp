@@ -7,6 +7,7 @@
 #include "devices/trs80m1/printer_status.hpp"
 #include "devices/trs80m1/system_port.hpp"
 #include "devices/trs80m1/keyboard.hpp"
+#include "devices/trs80m1l2/expansion_ports.hpp"
 #include "devices/shared/framebuffer.hpp"
 
 using Contract = Trs80M1L2PresetContract;
@@ -169,4 +170,28 @@ TEST_CASE("TRS-80 Model I Level II machine maps keyboard matrix at 0x3800", "[ma
     REQUIRE(machine->bus().read(Trs80M1Keyboard::rowAddress(0)) == 0x04);
     keyboard->releaseNamedKey('B');
     REQUIRE(machine->bus().read(Trs80M1Keyboard::rowAddress(0)) == 0x00);
+}
+
+TEST_CASE("TRS-80 Model I Level II machine decodes expansion ports E8-EF", "[machine][trs80m1l2][fast]") {
+    auto machine = createTrs80M1L2Machine();
+
+    REQUIRE(machine->bus().readPort(0xE8) == Trs80M1L2ExpansionPorts::kSerialStatusMask);
+    machine->bus().writePort(0xE9, 0x55);
+    REQUIRE(machine->bus().readPort(0xEA) == Trs80M1L2ExpansionPorts::kUartTxEmptyMask);
+
+    machine->bus().writePort(0xEB, 'X');
+    Trs80M1L2ExpansionPorts* ports = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M1L2ExpansionPorts*>(dev.get())) {
+            ports = found;
+            break;
+        }
+    }
+    REQUIRE(ports != nullptr);
+    REQUIRE(ports->lastTxByte() == 'X');
+
+    machine->bus().writePort(0xEC, 'P');
+    REQUIRE(ports->lastPrinterByte() == 'P');
+    REQUIRE(machine->bus().readPort(0xEC) == Trs80M1L2ExpansionPorts::kPrinterPortStatus);
+    REQUIRE(machine->bus().readPort(0xEF) == 0xFF);
 }

@@ -7,6 +7,7 @@
 #include "devices/trs80m1/printer_status.hpp"
 #include "devices/trs80m1/system_port.hpp"
 #include "devices/trs80m1/keyboard.hpp"
+#include "devices/trs80m1l2/expansion_ports.hpp"
 
 namespace {
 
@@ -50,6 +51,11 @@ std::unique_ptr<Machine> createTrs80M1L2Machine() {
     machine->bus().attachPort(*system_port, Contract::system_port,
                               static_cast<uint16_t>(Contract::system_port + 1));
     machine->addOwnedDevice(std::move(system_port));
+
+    auto expansion_ports = std::make_unique<Trs80M1L2ExpansionPorts>();
+    machine->bus().attachPort(*expansion_ports, Contract::expansion_port_start,
+                              Contract::expansion_port_end_exclusive);
+    machine->addOwnedDevice(std::move(expansion_ports));
 
     return machine;
 }
