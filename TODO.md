@@ -147,7 +147,7 @@ Reuse `devices/trs80m1/`; Level II-only expansion stays under `devices/trs80m1l2
 
 Own device folder (`devices/trs80m3/`). Do not include Model I family headers.
 
-- [ ] Hardware notes (`docs/machines/trs80m3.md`)
+- [x] Hardware notes (`docs/machines/trs80m3.md`)
 - [ ] Profile contract + memory map (14 KiB ROM, 48 KiB RAM, I/O latch window)
 - [ ] Video: lowercase glyphs and Model III framebuffer (512×192, block graphics)
 - [ ] Memory-mapped I/O latches (cassette idle, disk, printer idle)
