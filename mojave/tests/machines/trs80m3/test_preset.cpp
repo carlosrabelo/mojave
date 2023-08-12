@@ -3,6 +3,8 @@
 #include "machines/trs80m3/trs80m3_preset.hpp"
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
+#include "devices/shared/framebuffer.hpp"
+#include "devices/trs80m3/video_controller.hpp"
 
 using Contract = Trs80M3PresetContract;
 
@@ -85,15 +87,66 @@ TEST_CASE("TRS-80 Model III I/O latch window is reserved between ROM spans",
     REQUIRE(machine->bus().read(Contract::io_latch_start) == 0xFF);
 }
 
-TEST_CASE("TRS-80 Model III unmapped keyboard and VRAM read as floating bus 0xFF",
+TEST_CASE("TRS-80 Model III unmapped keyboard address reads as floating bus 0xFF",
           "[machine][trs80m3][fast]") {
     auto machine = createTrs80M3Machine();
 
     REQUIRE(machine->bus().read(Contract::keyboard_start) == 0xFF);
-    REQUIRE(machine->bus().read(Contract::vram_start) == 0xFF);
-
     machine->bus().write(Contract::keyboard_start, 0x55);
     REQUIRE(machine->bus().read(Contract::keyboard_start) == 0xFF);
+}
+
+TEST_CASE("TRS-80 Model III machine maps 64x16 VRAM at 0x3C00", "[machine][trs80m3][fast]") {
+    auto machine = createTrs80M3Machine();
+
+    machine->bus().write(Contract::vram_start, 'H');
+    REQUIRE(machine->bus().read(Contract::vram_start) == 'H');
+    machine->bus().write(Contract::vram_end_exclusive - 1, 'I');
+    REQUIRE(machine->bus().read(Contract::vram_end_exclusive - 1) == 'I');
+}
+
+TEST_CASE("TRS-80 Model III video controller renders uppercase and lowercase text",
+          "[machine][trs80m3][fast]") {
+    auto machine = createTrs80M3Machine();
+
+    Framebuffer* fb = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Framebuffer*>(dev.get())) {
+            fb = found;
+            break;
+        }
+    }
+    REQUIRE(fb != nullptr);
+    REQUIRE(fb->width() == Trs80M3VideoController::kFramebufferWidth);
+    REQUIRE(fb->height() == Trs80M3VideoController::kFramebufferHeight);
+
+    machine->reset();
+    REQUIRE(fb->getPixel(0, 0) == 0xFF000000u);
+
+    machine->bus().write(Contract::vram_start, 'A');
+    REQUIRE(fb->getPixel(3, 2) == 0xFFFFFFFFu);
+
+    machine->bus().write(static_cast<uint16_t>(Contract::vram_start + 1), 'a');
+    REQUIRE(fb->getPixel(11, 4) == 0xFFFFFFFFu);
+    REQUIRE(fb->getPixel(11, 2) == 0xFF000000u);
+}
+
+TEST_CASE("TRS-80 Model III machine renders block graphics in VRAM", "[machine][trs80m3][fast]") {
+    auto machine = createTrs80M3Machine();
+
+    Framebuffer* fb = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Framebuffer*>(dev.get())) {
+            fb = found;
+            break;
+        }
+    }
+    REQUIRE(fb != nullptr);
+
+    machine->reset();
+    machine->bus().write(Contract::vram_start, 161);
+    REQUIRE(fb->getPixel(1, 1) == 0xFFFFFFFFu);
+    REQUIRE(fb->getPixel(2, 7) == 0xFFFFFFFFu);
 }
 
 TEST_CASE("TRS-80 Model III runs inline NOP HALT program in RAM", "[machine][trs80m3][fast]") {

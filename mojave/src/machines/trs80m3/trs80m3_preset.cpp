@@ -2,6 +2,8 @@
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
 #include "devices/shared/memory.hpp"
+#include "devices/shared/framebuffer.hpp"
+#include "devices/trs80m3/video_controller.hpp"
 
 namespace {
 
@@ -23,6 +25,14 @@ std::unique_ptr<Machine> createTrs80M3Machine() {
 
     auto ram = std::make_unique<Memory>(Contract::ram_end_exclusive - Contract::ram_start);
     machine->attachDevice(std::move(ram), Contract::ram_start, Contract::ram_bus_end);
+
+    auto fb = std::make_unique<Framebuffer>(Trs80M3VideoController::kFramebufferWidth,
+                                            Trs80M3VideoController::kFramebufferHeight);
+    Framebuffer* fb_ptr = fb.get();
+    machine->addOwnedDevice(std::move(fb));
+
+    auto video = std::make_unique<Trs80M3VideoController>(*fb_ptr);
+    machine->attachDevice(std::move(video), Contract::vram_start, Contract::vram_end_exclusive);
 
     return machine;
 }
