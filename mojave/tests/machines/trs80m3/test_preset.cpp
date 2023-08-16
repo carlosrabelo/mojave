@@ -5,6 +5,7 @@
 #include "cpus/z80.hpp"
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m3/video_controller.hpp"
+#include "devices/trs80m3/io_latches.hpp"
 
 using Contract = Trs80M3PresetContract;
 
@@ -75,16 +76,38 @@ TEST_CASE("TRS-80 Model III machine maps 14 KiB ROM and 48 KiB RAM", "[machine][
     REQUIRE(machine->bus().read(0xFFFF) == 0x44);
 }
 
-TEST_CASE("TRS-80 Model III I/O latch window is reserved between ROM spans",
+TEST_CASE("TRS-80 Model III machine maps memory-mapped I/O latches at 37E0",
           "[machine][trs80m3][fast]") {
     auto machine = createTrs80M3Machine();
 
-    REQUIRE(machine->bus().read(Contract::io_latch_start) == 0xFF);
-    REQUIRE(machine->bus().read(Contract::printer_status_address) == 0xFF);
-    REQUIRE(machine->bus().read(static_cast<uint16_t>(Contract::io_latch_end_exclusive - 1)) == 0xFF);
+    REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M3IoLatches::kPrinterIdleReadValue);
+    machine->bus().write(Contract::printer_status_address, 0x55);
+    REQUIRE(machine->bus().read(Contract::printer_status_address) == Trs80M3IoLatches::kPrinterIdleReadValue);
 
-    machine->bus().write(Contract::io_latch_start, 0x55);
-    REQUIRE(machine->bus().read(Contract::io_latch_start) == 0xFF);
+    machine->bus().write(0x37E1, 0x01);
+    REQUIRE(machine->bus().read(0x37E1) == 0x01);
+
+    machine->bus().write(0x37E2, 0x04);
+    REQUIRE(machine->bus().read(0x37E2) == 0x04);
+
+    machine->bus().write(0x37E4, 0x01);
+    REQUIRE(machine->bus().read(0x37E4) == 0x01);
+
+    machine->bus().write(0x37EC, 0x88);
+    REQUIRE(machine->bus().read(0x37EC) == 0x88);
+    machine->bus().write(0x37ED, 0x0A);
+    REQUIRE(machine->bus().read(0x37ED) == 0x0A);
+
+    Trs80M3IoLatches* latches = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M3IoLatches*>(dev.get())) {
+            latches = found;
+            break;
+        }
+    }
+    REQUIRE(latches != nullptr);
+    REQUIRE(latches->diskCommand() == 0x88);
+    REQUIRE(latches->lastPrinterByte() == 0x55);
 }
 
 TEST_CASE("TRS-80 Model III unmapped keyboard address reads as floating bus 0xFF",

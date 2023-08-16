@@ -4,6 +4,7 @@
 #include "devices/shared/memory.hpp"
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m3/video_controller.hpp"
+#include "devices/trs80m3/io_latches.hpp"
 
 namespace {
 
@@ -18,6 +19,9 @@ std::unique_ptr<Machine> createTrs80M3Machine() {
 
     auto rom_low = std::make_unique<Memory>(Contract::io_latch_start - Contract::rom_start, true);
     machine->attachDevice(std::move(rom_low), Contract::rom_start, Contract::io_latch_start);
+
+    auto io_latches = std::make_unique<Trs80M3IoLatches>();
+    machine->attachDevice(std::move(io_latches), Contract::io_latch_start, Contract::io_latch_end_exclusive);
 
     auto rom_tail =
         std::make_unique<Memory>(Contract::rom_end_exclusive - Contract::rom_tail_start, true);
