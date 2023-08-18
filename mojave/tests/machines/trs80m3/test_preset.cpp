@@ -6,6 +6,7 @@
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m3/video_controller.hpp"
 #include "devices/trs80m3/io_latches.hpp"
+#include "devices/trs80m3/port_decode.hpp"
 
 using Contract = Trs80M3PresetContract;
 
@@ -170,6 +171,38 @@ TEST_CASE("TRS-80 Model III machine renders block graphics in VRAM", "[machine][
     machine->bus().write(Contract::vram_start, 161);
     REQUIRE(fb->getPixel(1, 1) == 0xFFFFFFFFu);
     REQUIRE(fb->getPixel(2, 7) == 0xFFFFFFFFu);
+}
+
+TEST_CASE("TRS-80 Model III machine decodes ports E0-EF", "[machine][trs80m3][fast]") {
+    auto machine = createTrs80M3Machine();
+
+    machine->bus().writePort(Contract::interrupt_latch_port_start, Trs80M3PortDecode::kRtcInterruptMask);
+    REQUIRE(machine->bus().readPort(Contract::interrupt_latch_port_start) == 0xFF);
+
+    Trs80M3PortDecode* ports = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M3PortDecode*>(dev.get())) {
+            ports = found;
+            break;
+        }
+    }
+    REQUIRE(ports != nullptr);
+    REQUIRE(ports->rtcEnabled());
+
+    ports->setRtcPending(true);
+    REQUIRE(machine->bus().readPort(0xE1) ==
+            static_cast<uint8_t>(~Trs80M3PortDecode::kRtcInterruptMask));
+
+    const uint8_t control = static_cast<uint8_t>(Trs80M3PortDecode::kDoubleWidthMask |
+                                                 Trs80M3PortDecode::kVideoWaitMask);
+    machine->bus().writePort(Contract::hardware_control_port_start, control);
+    REQUIRE(ports->doubleWidth());
+    REQUIRE(ports->videoWaitsEnabled());
+    REQUIRE(ports->cassetteMotorOn());
+    REQUIRE(machine->bus().readPort(Contract::hardware_control_port_start) == 0xFF);
+    REQUIRE(ports->interruptStatus() == 0xFF);
+
+    REQUIRE(machine->bus().readPort(0xE8) == Trs80M3PortDecode::kRs232IdleStatus);
 }
 
 TEST_CASE("TRS-80 Model III runs inline NOP HALT program in RAM", "[machine][trs80m3][fast]") {

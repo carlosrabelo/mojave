@@ -5,6 +5,7 @@
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m3/video_controller.hpp"
 #include "devices/trs80m3/io_latches.hpp"
+#include "devices/trs80m3/port_decode.hpp"
 
 namespace {
 
@@ -37,6 +38,15 @@ std::unique_ptr<Machine> createTrs80M3Machine() {
 
     auto video = std::make_unique<Trs80M3VideoController>(*fb_ptr);
     machine->attachDevice(std::move(video), Contract::vram_start, Contract::vram_end_exclusive);
+
+    auto port_decode = std::make_unique<Trs80M3PortDecode>();
+    Trs80M3PortDecode* port_ptr = port_decode.get();
+    machine->bus().attachPort(*port_decode, Contract::port_decode_start,
+                              Contract::port_decode_end_exclusive, true);
+    machine->addOwnedDevice(std::move(port_decode));
+
+    if (auto* z80 = dynamic_cast<Z80*>(&machine->cpu()))
+        port_ptr->bindCpu(z80);
 
     return machine;
 }
