@@ -6,6 +6,7 @@
 #include "devices/trs80m3/video_controller.hpp"
 #include "devices/trs80m3/io_latches.hpp"
 #include "devices/trs80m3/port_decode.hpp"
+#include "devices/trs80m3/keyboard.hpp"
 
 namespace {
 
@@ -27,6 +28,9 @@ std::unique_ptr<Machine> createTrs80M3Machine() {
     auto rom_tail =
         std::make_unique<Memory>(Contract::rom_end_exclusive - Contract::rom_tail_start, true);
     machine->attachDevice(std::move(rom_tail), Contract::rom_tail_start, Contract::rom_end_exclusive);
+
+    auto keyboard = std::make_unique<Trs80M3Keyboard>();
+    machine->attachDevice(std::move(keyboard), Contract::keyboard_start, Contract::keyboard_end_exclusive);
 
     auto ram = std::make_unique<Memory>(Contract::ram_end_exclusive - Contract::ram_start);
     machine->attachDevice(std::move(ram), Contract::ram_start, Contract::ram_bus_end);

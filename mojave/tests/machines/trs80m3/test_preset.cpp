@@ -7,6 +7,7 @@
 #include "devices/trs80m3/video_controller.hpp"
 #include "devices/trs80m3/io_latches.hpp"
 #include "devices/trs80m3/port_decode.hpp"
+#include "devices/trs80m3/keyboard.hpp"
 
 using Contract = Trs80M3PresetContract;
 
@@ -111,13 +112,40 @@ TEST_CASE("TRS-80 Model III machine maps memory-mapped I/O latches at 37E0",
     REQUIRE(latches->lastPrinterByte() == 0x55);
 }
 
-TEST_CASE("TRS-80 Model III unmapped keyboard address reads as floating bus 0xFF",
+TEST_CASE("TRS-80 Model III unmapped keyboard address 0x3800 reads as no keys",
           "[machine][trs80m3][fast]") {
     auto machine = createTrs80M3Machine();
 
-    REQUIRE(machine->bus().read(Contract::keyboard_start) == 0xFF);
-    machine->bus().write(Contract::keyboard_start, 0x55);
-    REQUIRE(machine->bus().read(Contract::keyboard_start) == 0xFF);
+    REQUIRE(machine->bus().read(0x3800) == 0x00);
+    machine->bus().write(0x3800, 0x55);
+    REQUIRE(machine->bus().read(0x3800) == 0x00);
+}
+
+TEST_CASE("TRS-80 Model III machine maps keyboard matrix with CONTROL and CAPS LOCK",
+          "[machine][trs80m3][fast]") {
+    auto machine = createTrs80M3Machine();
+
+    Trs80M3Keyboard* keyboard = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M3Keyboard*>(dev.get())) {
+            keyboard = found;
+            break;
+        }
+    }
+    REQUIRE(keyboard != nullptr);
+
+    keyboard->pressNamedKey('B');
+    REQUIRE(machine->bus().read(Trs80M3Keyboard::rowAddress(0)) == 0x04);
+    keyboard->releaseNamedKey('B');
+    REQUIRE(machine->bus().read(Trs80M3Keyboard::rowAddress(0)) == 0x00);
+
+    keyboard->pressSpecialKey(Trs80M3Keyboard::SpecialKey::Control);
+    REQUIRE(machine->bus().read(Trs80M3Keyboard::rowAddress(7)) == 0x02);
+    keyboard->pressSpecialKey(Trs80M3Keyboard::SpecialKey::CapsLock);
+    REQUIRE(machine->bus().read(Trs80M3Keyboard::rowAddress(7)) == 0x06);
+    keyboard->releaseSpecialKey(Trs80M3Keyboard::SpecialKey::Control);
+    keyboard->releaseSpecialKey(Trs80M3Keyboard::SpecialKey::CapsLock);
+    REQUIRE(machine->bus().read(Trs80M3Keyboard::rowAddress(7)) == 0x00);
 }
 
 TEST_CASE("TRS-80 Model III machine maps 64x16 VRAM at 0x3C00", "[machine][trs80m3][fast]") {

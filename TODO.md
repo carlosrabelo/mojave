@@ -152,7 +152,7 @@ Own device folder (`devices/trs80m3/`). Do not include Model I family headers.
 - [x] Video: lowercase glyphs and Model III framebuffer (512×192, block graphics)
 - [x] Memory-mapped I/O latches (cassette idle, disk, printer idle)
 - [x] Port I/O decode (E0h–EFh interrupt latch, NMI, hardware control)
-- [ ] Keyboard matrix additions (CONTROL, CAPS LOCK)
+- [x] Keyboard matrix additions (CONTROL, CAPS LOCK)
 - [ ] Machine clock 2.03 MHz + 30 Hz maskable interrupt
 - [ ] Floppy controller stub (F0h–F4h idle) and disk-index NMI path
 - [ ] RS-232 serial port stub (E8h–EBh)
