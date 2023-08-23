@@ -8,6 +8,7 @@
 #include "devices/trs80m3/port_decode.hpp"
 #include "devices/trs80m3/keyboard.hpp"
 #include "devices/trs80m3/rtc_timer.hpp"
+#include "devices/trs80m3/floppy_controller.hpp"
 
 namespace {
 
@@ -50,8 +51,15 @@ std::unique_ptr<Machine> createTrs80M3Machine() {
                               Contract::port_decode_end_exclusive, true);
     machine->addOwnedDevice(std::move(port_decode));
 
+    auto floppy = std::make_unique<Trs80M3FloppyController>(*port_ptr);
+    Trs80M3FloppyController* floppy_ptr = floppy.get();
+    machine->bus().attachPort(*floppy, Contract::floppy_port_start, Contract::floppy_port_end_exclusive,
+                              true);
+    machine->addOwnedDevice(std::move(floppy));
+
     auto* z80 = dynamic_cast<Z80*>(&machine->cpu());
     port_ptr->bindCpu(z80);
+    floppy_ptr->bindCpu(z80);
 
     auto rtc_timer = std::make_unique<Trs80M3RtcTimer>(*port_ptr, *z80, Contract::guest_cpu_clock_hz);
     machine->addOwnedDevice(std::move(rtc_timer));

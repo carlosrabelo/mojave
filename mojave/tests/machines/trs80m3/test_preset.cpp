@@ -8,6 +8,7 @@
 #include "devices/trs80m3/io_latches.hpp"
 #include "devices/trs80m3/port_decode.hpp"
 #include "devices/trs80m3/keyboard.hpp"
+#include "devices/trs80m3/floppy_controller.hpp"
 
 using Contract = Trs80M3PresetContract;
 
@@ -231,6 +232,28 @@ TEST_CASE("TRS-80 Model III machine decodes ports E0-EF", "[machine][trs80m3][fa
     REQUIRE(ports->interruptStatus() == 0xFF);
 
     REQUIRE(machine->bus().readPort(0xE8) == Trs80M3PortDecode::kRs232IdleStatus);
+}
+
+TEST_CASE("TRS-80 Model III machine maps floppy controller at F0-F4", "[machine][trs80m3][fast]") {
+    auto machine = createTrs80M3Machine();
+
+    REQUIRE(machine->bus().readPort(Contract::floppy_port_start) ==
+            Trs80M3FloppyController::kStatusIdle);
+    machine->bus().writePort(0xF1, 0x0A);
+    machine->bus().writePort(0xF2, 0x05);
+    machine->bus().writePort(0xC1F4, 0xC1);
+
+    Trs80M3FloppyController* floppy = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (auto* found = dynamic_cast<Trs80M3FloppyController*>(dev.get())) {
+            floppy = found;
+            break;
+        }
+    }
+    REQUIRE(floppy != nullptr);
+    REQUIRE(floppy->track() == 0x0A);
+    REQUIRE(floppy->sector() == 0x05);
+    REQUIRE(floppy->driveSelect() == 0xC1);
 }
 
 TEST_CASE("TRS-80 Model III runs inline NOP HALT program in RAM", "[machine][trs80m3][fast]") {
