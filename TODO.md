@@ -155,7 +155,7 @@ Own device folder (`devices/trs80m3/`). Do not include Model I family headers.
 - [x] Keyboard matrix additions (CONTROL, CAPS LOCK)
 - [x] Machine clock 2.03 MHz + 30 Hz maskable interrupt
 - [x] Floppy controller stub (F0h–F4h idle) and disk-index NMI path
-- [ ] RS-232 serial port stub (E8h–EBh)
+- [x] RS-232 serial port stub (E8h–EBh)
 - [ ] Plug into SDL/Qt6 virtual screen
 - [ ] 32-column text / 128×48 graphics mode
 - [ ] Host layout keyboard typing (SDL/Qt6)
