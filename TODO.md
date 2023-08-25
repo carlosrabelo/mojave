@@ -157,7 +157,7 @@ Own device folder (`devices/trs80m3/`). Do not include Model I family headers.
 - [x] Floppy controller stub (F0h–F4h idle) and disk-index NMI path
 - [x] RS-232 serial port stub (E8h–EBh)
 - [x] Plug into SDL/Qt6 virtual screen
-- [ ] 32-column text / 128×48 graphics mode
+- [x] 32-column text / 128×48 graphics mode
 - [ ] Host layout keyboard typing (SDL/Qt6)
 
 ## Sinclair ZX-80 (`zx80`)

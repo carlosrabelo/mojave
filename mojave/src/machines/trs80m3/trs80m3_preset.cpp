@@ -9,6 +9,7 @@
 #include "devices/trs80m3/keyboard.hpp"
 #include "devices/trs80m3/rtc_timer.hpp"
 #include "devices/trs80m3/floppy_controller.hpp"
+#include "devices/trs80m3/cassette_screen_port.hpp"
 
 namespace {
 
@@ -43,7 +44,13 @@ std::unique_ptr<Machine> createTrs80M3Machine() {
     machine->addOwnedDevice(std::move(fb));
 
     auto video = std::make_unique<Trs80M3VideoController>(*fb_ptr);
+    Trs80M3VideoController* video_ptr = video.get();
     machine->attachDevice(std::move(video), Contract::vram_start, Contract::vram_end_exclusive);
+
+    auto cassette_screen = std::make_unique<Trs80M3CassetteScreenPort>(*video_ptr);
+    machine->bus().attachPort(*cassette_screen, Contract::cassette_screen_port_start,
+                              Contract::cassette_screen_port_end_exclusive, true);
+    machine->addOwnedDevice(std::move(cassette_screen));
 
     auto port_decode = std::make_unique<Trs80M3PortDecode>();
     Trs80M3PortDecode* port_ptr = port_decode.get();
