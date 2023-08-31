@@ -158,7 +158,7 @@ Own device folder (`devices/trs80m3/`). Do not include Model I family headers.
 - [x] RS-232 serial port stub (E8h–EBh)
 - [x] Plug into SDL/Qt6 virtual screen
 - [x] 32-column text / 128×48 graphics mode
-- [ ] Host layout keyboard typing (SDL/Qt6)
+- [x] Host layout keyboard typing (SDL/Qt6)
 
 ## Sinclair ZX-80 (`zx80`)
 

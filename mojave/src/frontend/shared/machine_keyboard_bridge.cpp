@@ -1,9 +1,14 @@
 #include "frontend/shared/machine_keyboard_bridge.hpp"
 
+MachineKeyboardBridge::MachineKeyboardBridge(Trs80M3HostKeyboardBridge bridge)
+    : bridge_(std::move(bridge)) {}
+
 MachineKeyboardBridge::MachineKeyboardBridge(Trs80HostKeyboardBridge bridge)
     : bridge_(std::move(bridge)) {}
 
 std::optional<MachineKeyboardBridge> MachineKeyboardBridge::fromMachine(Machine& machine) {
+    if (auto m3 = Trs80M3HostKeyboardBridge::fromMachine(machine))
+        return MachineKeyboardBridge(std::move(*m3));
     if (auto m1 = Trs80HostKeyboardBridge::fromMachine(machine))
         return MachineKeyboardBridge(std::move(*m1));
     return std::nullopt;

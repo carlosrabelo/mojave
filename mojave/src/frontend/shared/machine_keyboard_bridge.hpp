@@ -4,6 +4,7 @@
 #include <optional>
 #include <variant>
 #include "machines/trs80m1l1/trs80_host_keyboard_bridge.hpp"
+#include "machines/trs80m3/trs80_host_keyboard_bridge.hpp"
 
 class Machine;
 class QKeyEvent;
@@ -17,9 +18,10 @@ public:
     bool handleQtKeyEvent(QKeyEvent* event, Machine* machine = nullptr);
 
 private:
+    explicit MachineKeyboardBridge(Trs80M3HostKeyboardBridge bridge);
     explicit MachineKeyboardBridge(Trs80HostKeyboardBridge bridge);
 
-    std::variant<Trs80HostKeyboardBridge> bridge_;
+    std::variant<Trs80M3HostKeyboardBridge, Trs80HostKeyboardBridge> bridge_;
 };
 
 #endif
