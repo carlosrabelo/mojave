@@ -165,7 +165,7 @@ Own device folder (`devices/trs80m3/`). Do not include Model I family headers.
 Family devices (`devices/sinclair/`): membrane keyboard, cassette stub, host typing.
 ULA, display file, and charset stay under `devices/zx80/`.
 
-- [ ] Hardware notes (`docs/machines/zx80.md`)
+- [x] Hardware notes (`docs/machines/zx80.md`)
 - [ ] Profile contract + memory map (4 KiB ROM at 0x0000, 1 KiB RAM at 0x4000)
 - [ ] Display file layout (DFILE: HALT-prefixed lines, 32 columns; `D_FILE` at 0x400C)
 - [ ] ROM character bitmap reader (64 glyphs × 8×8 from 4 KiB ROM)
