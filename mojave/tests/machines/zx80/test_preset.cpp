@@ -3,6 +3,7 @@
 #include "machines/zx80/zx80_preset.hpp"
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
+#include "devices/zx80/display_file.hpp"
 
 using Contract = Zx80PresetContract;
 
@@ -20,11 +21,11 @@ TEST_CASE("Sinclair ZX-80 preset contract memory map", "[machine][zx80][fast]") 
     REQUIRE(Contract::sysvar_start == 0x4000);
     REQUIRE(Contract::err_nr_address == 0x4000);
     REQUIRE(Contract::d_file_ptr_address == 0x400C);
-    REQUIRE(Contract::dfile_halt_opcode == 0x76);
-    REQUIRE(Contract::dfile_columns == 32);
-    REQUIRE(Contract::dfile_rows == 24);
-    REQUIRE(Contract::dfile_min_collapsed_bytes == 25);
-    REQUIRE(Contract::dfile_max_bytes == 793);
+    REQUIRE(Contract::dfile_halt_opcode == Zx80DisplayFile::kHaltOpcode);
+    REQUIRE(Contract::dfile_columns == Zx80DisplayFile::kColumns);
+    REQUIRE(Contract::dfile_rows == Zx80DisplayFile::kRows);
+    REQUIRE(Contract::dfile_min_collapsed_bytes == Zx80DisplayFile::kMinCollapsedBytes);
+    REQUIRE(Contract::dfile_max_bytes == Zx80DisplayFile::kMaxBytes);
     REQUIRE(Contract::charset_rom_start == 0x0E00);
     REQUIRE(Contract::charset_rom_end_exclusive == 0x1000);
     REQUIRE(Contract::charset_i_register == 0x0E);

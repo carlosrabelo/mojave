@@ -167,7 +167,7 @@ ULA, display file, and charset stay under `devices/zx80/`.
 
 - [x] Hardware notes (`docs/machines/zx80.md`)
 - [x] Profile contract + memory map (4 KiB ROM at 0x0000, 1 KiB RAM at 0x4000)
-- [ ] Display file layout (DFILE: HALT-prefixed lines, 32 columns; `D_FILE` at 0x400C)
+- [x] Display file layout (DFILE: HALT-prefixed lines, 32 columns; `D_FILE` at 0x400C)
 - [ ] ROM character bitmap reader (64 glyphs × 8×8 from 4 KiB ROM)
 - [ ] Video generator (50 Hz, DFILE → 256×192 framebuffer; v1 frame tick)
 - [ ] Keyboard matrix (40 keys, 8×5; IN read with row from address high byte)
