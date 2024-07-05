@@ -4,6 +4,7 @@
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
 #include "devices/zx80/display_file.hpp"
+#include "devices/zx80/character_rom.hpp"
 
 using Contract = Zx80PresetContract;
 
@@ -26,9 +27,9 @@ TEST_CASE("Sinclair ZX-80 preset contract memory map", "[machine][zx80][fast]") 
     REQUIRE(Contract::dfile_rows == Zx80DisplayFile::kRows);
     REQUIRE(Contract::dfile_min_collapsed_bytes == Zx80DisplayFile::kMinCollapsedBytes);
     REQUIRE(Contract::dfile_max_bytes == Zx80DisplayFile::kMaxBytes);
-    REQUIRE(Contract::charset_rom_start == 0x0E00);
-    REQUIRE(Contract::charset_rom_end_exclusive == 0x1000);
-    REQUIRE(Contract::charset_i_register == 0x0E);
+    REQUIRE(Contract::charset_rom_start == Zx80CharacterRom::kCharsetBase);
+    REQUIRE(Contract::charset_rom_end_exclusive == Zx80CharacterRom::kCharsetEndExclusive);
+    REQUIRE(Contract::charset_i_register == Zx80CharacterRom::kIRegister);
     REQUIRE(Contract::vram_mirror_start == 0xC000);
     REQUIRE(Contract::vram_mirror_end_exclusive == 65536u);
 
