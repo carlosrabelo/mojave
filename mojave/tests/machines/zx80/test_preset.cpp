@@ -5,6 +5,8 @@
 #include "cpus/z80.hpp"
 #include "devices/zx80/display_file.hpp"
 #include "devices/zx80/character_rom.hpp"
+#include "devices/zx80/video_generator.hpp"
+#include "devices/shared/framebuffer.hpp"
 
 using Contract = Zx80PresetContract;
 
@@ -71,6 +73,21 @@ TEST_CASE("Sinclair ZX-80 unmapped addresses read floating bus", "[machine][zx80
     REQUIRE(machine->bus().read(0x4400) == 0xFF);
     REQUIRE(machine->bus().read(0xBFFF) == 0xFF);
     REQUIRE(machine->bus().read(0xC000) == 0xFF);
+}
+
+TEST_CASE("Sinclair ZX-80 preset owns framebuffer and video generator", "[machine][zx80][fast]") {
+    auto machine = createZx80Machine();
+
+    bool has_framebuffer = false;
+    bool has_video = false;
+    for (const auto& dev : machine->ownedDevices()) {
+        if (dynamic_cast<Framebuffer*>(dev.get()))
+            has_framebuffer = true;
+        if (dynamic_cast<Zx80VideoGenerator*>(dev.get()))
+            has_video = true;
+    }
+    REQUIRE(has_framebuffer);
+    REQUIRE(has_video);
 }
 
 TEST_CASE("Sinclair ZX-80 tiny program runs from RAM", "[machine][zx80][fast]") {
