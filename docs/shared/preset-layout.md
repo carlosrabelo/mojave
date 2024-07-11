@@ -9,7 +9,7 @@ Conventions for built-in machine presets: folder layout, type names, shared
 | Term | Meaning | Examples |
 |------|---------|----------|
 | **Preset id** | Registry string and primary folder name | `trs80m1l1`, `trs80m3`, `zx80`, `zx81` |
-| **Family id** | Hardware family folder when 2+ presets share *identical* device behaviour | `trs80m1` (exists); `sinclair` (future) |
+| **Family id** | Hardware family folder when 2+ presets share *identical* device behaviour | `trs80m1` (exists); `sinclair` (exists) |
 
 Identical means the same silicon/PCB API and constants — not “similar.” Similar
 hardware stays duplicated under each preset until a second member needs the same
@@ -21,7 +21,7 @@ API; then open a family folder.
 |-------|--------------|--------------------|
 | Contract / factory | `machines/<id>/<id>_preset.{hpp,cpp}` | `<Id>PresetContract`, `create<Id>Machine`, `is<Id>PresetId` |
 | Preset-only devices | `devices/<id>/<concept>.{hpp,cpp}` | `<Id><Concept>` (e.g. `Zx81VideoGenerator`) |
-| Family devices | `devices/<family>/<concept>.{hpp,cpp}` | `<Family><Concept>` (e.g. `Trs80M1Keyboard`; future `SinclairKeyboard`) |
+| Family devices | `devices/<family>/<concept>.{hpp,cpp}` | `<Family><Concept>` (e.g. `Trs80M1Keyboard`, `SinclairKeyboard`) |
 | Host keyboard | `machines/<id>/` + `frontend/*<id>*` | Bridge filename **embeds full preset id** (e.g. `zx81_host_keyboard_bridge_sdl.cpp`) |
 | Tests | Mirror under `tests/devices/<id\|family>/`, `tests/machines/<id>/` | Same basenames as sources |
 

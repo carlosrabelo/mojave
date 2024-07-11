@@ -6,6 +6,8 @@
 #include "devices/zx80/display_file.hpp"
 #include "devices/zx80/character_rom.hpp"
 #include "devices/zx80/video_generator.hpp"
+#include "devices/zx80/port_decode.hpp"
+#include "devices/sinclair/keyboard.hpp"
 #include "devices/shared/framebuffer.hpp"
 
 using Contract = Zx80PresetContract;
@@ -34,6 +36,12 @@ TEST_CASE("Sinclair ZX-80 preset contract memory map", "[machine][zx80][fast]") 
     REQUIRE(Contract::charset_i_register == Zx80CharacterRom::kIRegister);
     REQUIRE(Contract::vram_mirror_start == 0xC000);
     REQUIRE(Contract::vram_mirror_end_exclusive == 65536u);
+
+    REQUIRE(Contract::keyboard_port_low_byte == SinclairKeyboard::kPortLowByte);
+    REQUIRE(Contract::keyboard_row_count == SinclairKeyboard::kRowCount);
+    REQUIRE(Contract::keyboard_bits_per_row == SinclairKeyboard::kBitsPerRow);
+    REQUIRE(Contract::io_port_attach_start == 0x0000);
+    REQUIRE(Contract::io_port_attach_end_exclusive == 0x0000);
 
     REQUIRE(Contract::load_rom_address == 0x0000);
     REQUIRE(Contract::load_rom_end_exclusive == 0x1000);
@@ -80,14 +88,47 @@ TEST_CASE("Sinclair ZX-80 preset owns framebuffer and video generator", "[machin
 
     bool has_framebuffer = false;
     bool has_video = false;
+    bool has_keyboard = false;
+    bool has_ports = false;
     for (const auto& dev : machine->ownedDevices()) {
         if (dynamic_cast<Framebuffer*>(dev.get()))
             has_framebuffer = true;
         if (dynamic_cast<Zx80VideoGenerator*>(dev.get()))
             has_video = true;
+        if (dynamic_cast<SinclairKeyboard*>(dev.get()))
+            has_keyboard = true;
+        if (dynamic_cast<Zx80PortDecode*>(dev.get()))
+            has_ports = true;
     }
     REQUIRE(has_framebuffer);
     REQUIRE(has_video);
+    REQUIRE(has_keyboard);
+    REQUIRE(has_ports);
+}
+
+TEST_CASE("Sinclair ZX-80 machine maps keyboard IN from address high byte", "[machine][zx80][fast]") {
+    auto machine = createZx80Machine();
+
+    REQUIRE(machine->bus().readPort(0xFEFE) == 0xFF);
+    REQUIRE(machine->bus().readPort(0x7FFE) == 0xFF);
+    REQUIRE(machine->bus().readPort(0xFDFF) == 0xFF);
+
+    SinclairKeyboard* keyboard = nullptr;
+    for (const auto& dev : machine->ownedDevices()) {
+        keyboard = dynamic_cast<SinclairKeyboard*>(dev.get());
+        if (keyboard != nullptr)
+            break;
+    }
+    REQUIRE(keyboard != nullptr);
+
+    keyboard->pressKey(SinclairKeyboard::Key::Shift);
+    REQUIRE(machine->bus().readPort(0xFEFE) == 0xFE);
+    REQUIRE(machine->bus().readPort(0xFDFE) == 0xFF);
+
+    keyboard->releaseAll();
+    keyboard->pressKey(SinclairKeyboard::Key::Space);
+    REQUIRE(machine->bus().readPort(0x7FFE) == 0xFE);
+    REQUIRE(machine->bus().readPort(0xFEFE) == 0xFF);
 }
 
 TEST_CASE("Sinclair ZX-80 tiny program runs from RAM", "[machine][zx80][fast]") {

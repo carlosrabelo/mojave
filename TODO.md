@@ -170,7 +170,7 @@ ULA, display file, and charset stay under `devices/zx80/`.
 - [x] Display file layout (DFILE: HALT-prefixed lines, 32 columns; `D_FILE` at 0x400C)
 - [x] ROM character bitmap reader (64 glyphs × 8×8 from 4 KiB ROM)
 - [x] Video generator (50 Hz, DFILE → 256×192 framebuffer; v1 frame tick)
-- [ ] Keyboard matrix (40 keys, 8×5; IN read with row from address high byte)
+- [x] Keyboard matrix (40 keys, 8×5; IN read with row from address high byte)
 - [ ] Cassette EAR/MIC interface (port decode; idle levels, no image transport)
 - [ ] Machine clock 3.25 MHz
 - [ ] Plug into SDL/Qt6 virtual screen
