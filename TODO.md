@@ -172,7 +172,7 @@ ULA, display file, and charset stay under `devices/zx80/`.
 - [x] Video generator (50 Hz, DFILE → 256×192 framebuffer; v1 frame tick)
 - [x] Keyboard matrix (40 keys, 8×5; IN read with row from address high byte)
 - [x] Cassette EAR/MIC interface (port decode; idle levels, no image transport)
-- [ ] Machine clock 3.25 MHz
+- [x] Machine clock 3.25 MHz
 - [ ] Plug into SDL/Qt6 virtual screen
 - [ ] Wire keyboard matrix to SDL/Qt6 host input
 - [ ] Host layout keyboard typing (SDL/Qt6; ZX key legends)
