@@ -2,6 +2,7 @@
 #include "machines/shared/machine.hpp"
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m3/video_controller.hpp"
+#include "devices/zx80/video_generator.hpp"
 
 namespace {
 
@@ -18,6 +19,10 @@ Framebuffer* findFramebuffer(Machine& machine) {
 void refreshMachineFramebuffer(Machine& machine, Framebuffer& fb) {
     for (const auto& dev : machine.ownedDevices()) {
         if (auto* video = dynamic_cast<Trs80M3VideoController*>(dev.get())) {
+            video->refreshFramebuffer();
+            return;
+        }
+        if (auto* video = dynamic_cast<Zx80VideoGenerator*>(dev.get())) {
             video->refreshFramebuffer();
             return;
         }
