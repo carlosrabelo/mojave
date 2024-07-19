@@ -5,6 +5,7 @@
 #include <variant>
 #include "machines/trs80m1l1/trs80_host_keyboard_bridge.hpp"
 #include "machines/trs80m3/trs80_host_keyboard_bridge.hpp"
+#include "machines/zx80/zx80_host_keyboard_bridge.hpp"
 
 class Machine;
 class QKeyEvent;
@@ -20,8 +21,9 @@ public:
 private:
     explicit MachineKeyboardBridge(Trs80M3HostKeyboardBridge bridge);
     explicit MachineKeyboardBridge(Trs80HostKeyboardBridge bridge);
+    explicit MachineKeyboardBridge(Zx80HostKeyboardBridge bridge);
 
-    std::variant<Trs80M3HostKeyboardBridge, Trs80HostKeyboardBridge> bridge_;
+    std::variant<Trs80M3HostKeyboardBridge, Trs80HostKeyboardBridge, Zx80HostKeyboardBridge> bridge_;
 };
 
 #endif
