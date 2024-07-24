@@ -3,11 +3,12 @@
 
 #include "devices/sinclair/keyboard.hpp"
 
-// Shift + matrix key held together. Host-layout symbol mapping is added in the
-// later typing TODO item.
 struct SinclairTypingChord {
     SinclairKeyboard::Key key = SinclairKeyboard::Key::Space;
     bool shift = false;
 };
+
+bool sinclairTypingChordForChar(char ch, SinclairTypingChord& out);
+bool sinclairTypingChordNeedsLetterMode(const SinclairTypingChord& chord);
 
 #endif

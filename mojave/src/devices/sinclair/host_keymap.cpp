@@ -124,3 +124,25 @@ bool sinclairHostKeyFromDigit(char ch, SinclairKeyboard::Key& out) {
         return false;
     }
 }
+
+bool sinclairHostTypingChordForHostChar(char ch, SinclairTypingChord& out) {
+    if (sinclairHostKeyFromLetter(ch, out.key)) {
+        out.shift = false;
+        return true;
+    }
+    if (sinclairHostKeyFromDigit(ch, out.key)) {
+        out.shift = false;
+        return true;
+    }
+    if (ch == ' ') {
+        out.key = SinclairKeyboard::Key::Space;
+        out.shift = false;
+        return true;
+    }
+    if (ch == '.') {
+        out.key = SinclairKeyboard::Key::Dot;
+        out.shift = false;
+        return true;
+    }
+    return sinclairTypingChordForChar(ch, out);
+}

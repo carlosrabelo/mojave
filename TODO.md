@@ -175,7 +175,7 @@ ULA, display file, and charset stay under `devices/zx80/`.
 - [x] Machine clock 3.25 MHz
 - [x] Plug into SDL/Qt6 virtual screen
 - [x] Wire keyboard matrix to SDL/Qt6 host input
-- [ ] Host layout keyboard typing (SDL/Qt6; ZX key legends)
+- [x] Host layout keyboard typing (SDL/Qt6; ZX key legends)
 
 ## Sinclair ZX-81 (`zx81`)
 

@@ -1,6 +1,7 @@
 #include "frontend/shared/sinclair_sdl_input.hpp"
-#include "devices/sinclair/host_keyboard_adapter.hpp"
+#include "devices/sinclair/host_input.hpp"
 #include "devices/sinclair/host_keymap.hpp"
+#include "devices/sinclair/typing_chord.hpp"
 
 namespace {
 
@@ -83,6 +84,87 @@ bool sdlSymToMatrixKey(SDL_Keycode sym, SinclairKeyboard::Key& out) {
     }
 }
 
+bool sdlSymToHostChar(SDL_Keycode sym, uint16_t mod, char& out) {
+    const bool shift = (mod & KMOD_SHIFT) != 0;
+
+    switch (sym) {
+    case SDLK_QUOTE:
+    case SDLK_QUOTEDBL:
+        out = '"';
+        return true;
+    case SDLK_BACKQUOTE:
+        if (shift) {
+            out = '"';
+            return true;
+        }
+        return false;
+    case SDLK_SEMICOLON:
+    case SDLK_COLON:
+        out = shift ? ':' : ';';
+        return true;
+    case SDLK_COMMA:
+    case SDLK_LESS:
+        out = shift ? '<' : ',';
+        return true;
+    case SDLK_MINUS:
+    case SDLK_UNDERSCORE:
+        out = '-';
+        return true;
+    case SDLK_EQUALS:
+    case SDLK_PLUS:
+        out = shift ? '+' : '=';
+        return true;
+    case SDLK_SLASH:
+    case SDLK_QUESTION:
+        out = shift ? '?' : '/';
+        return true;
+    case SDLK_LEFTBRACKET:
+        out = '(';
+        return true;
+    case SDLK_RIGHTBRACKET:
+        out = ')';
+        return true;
+    case SDLK_ASTERISK:
+    case SDLK_KP_MULTIPLY:
+        out = '*';
+        return true;
+    case SDLK_DOLLAR:
+        out = '$';
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool sdlApplyHostChar(SinclairHostKeyboardAdapter& adapter, SDL_Keycode sym, uint16_t mod, bool down) {
+    char ch = '\0';
+    if (!sdlSymToHostChar(sym, mod, ch))
+        return false;
+
+    SinclairTypingChord chord;
+    if (!sinclairTypingChordForChar(ch, chord))
+        return false;
+
+    sinclairHostApplyTypingChord(adapter, chord, down);
+    return true;
+}
+
+void sdlApplyMatrixKey(SinclairHostKeyboardAdapter& adapter, SinclairKeyboard::Key key, uint16_t mod,
+                       bool down) {
+    if (down) {
+        if ((mod & KMOD_SHIFT) != 0)
+            sinclairHostSyncShift(adapter, true);
+        else
+            sinclairHostSyncShift(adapter, false);
+        sinclairHostMatrixKeyDown(adapter, key);
+        return;
+    }
+
+    sinclairHostMatrixKeyUp(adapter, key);
+    if ((mod & KMOD_SHIFT) == 0)
+        sinclairHostSyncShift(adapter, false);
+}
+
 } // namespace
 
 bool sinclairHandleSdlKeyboardEvent(SinclairHostKeyboardAdapter& adapter, const SDL_Event& event,
@@ -104,23 +186,27 @@ bool sinclairHandleSdlKeyboardEvent(SinclairHostKeyboardAdapter& adapter, const 
         return true;
 
     if (sdlShiftKey(sym)) {
-        if (down)
-            adapter.hostKeyDown(SinclairKeyboard::Key::Shift);
-        else
-            adapter.hostKeyUp(SinclairKeyboard::Key::Shift);
+        sinclairHostSyncShift(adapter, down);
         return true;
     }
 
     if (sdlModifierOnlyKey(sym))
         return true;
 
-    SinclairKeyboard::Key key = SinclairKeyboard::Key::Space;
-    if (!sdlSymToMatrixKey(sym, key))
+    if (sym == SDLK_BACKSPACE || sym == SDLK_DELETE) {
+        if (down)
+            sinclairHostPulseRubout(adapter);
+        return true;
+    }
+
+    if (sdlApplyHostChar(adapter, sym, mod, down))
         return true;
 
-    if (down)
-        adapter.hostKeyDown(key);
-    else
-        adapter.hostKeyUp(key);
+    SinclairKeyboard::Key key = SinclairKeyboard::Key::Space;
+    if (sdlSymToMatrixKey(sym, key)) {
+        sdlApplyMatrixKey(adapter, key, mod, down);
+        return true;
+    }
+
     return true;
 }
