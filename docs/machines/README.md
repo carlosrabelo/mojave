@@ -10,6 +10,7 @@ coding.
 | `trs80m1l1`, `trs80m1l2` | [trs80m1.md](trs80m1.md) |
 | `trs80m3` | [trs80m3.md](trs80m3.md) |
 | `zx80` | [zx80.md](zx80.md) |
+| `zx81` | [zx81.md](zx81.md) |
 
 Implementation order and checkboxes live in `TODO.md` at the repository root.
 Preset isolation, device families, and naming conventions: [CONTRIBUTING.md](../../CONTRIBUTING.md) and [preset-layout.md](../shared/preset-layout.md).
