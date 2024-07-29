@@ -182,7 +182,7 @@ ULA, display file, and charset stay under `devices/zx80/`.
 Reuse `devices/sinclair/`. ULA/SLOW NMI and RAM mirror stay under `devices/zx81/`.
 
 - [x] Hardware notes (`docs/machines/zx81.md`)
-- [ ] Profile contract + memory map (8 KiB ROM at 0x0000, 1 KiB RAM at 0x4000)
+- [x] Profile contract + memory map (8 KiB ROM at 0x0000, 1 KiB RAM at 0x4000)
 - [ ] Display file layout (DFILE: HALT-prefixed lines, 32 columns; `D_FILE` at 0x400C)
 - [ ] ROM character bitmap reader (64 glyphs × 8×8 from 8 KiB ROM)
 - [ ] ULA video (50 Hz, DFILE → 256×192; FAST blanks, SLOW keeps display via NMI)

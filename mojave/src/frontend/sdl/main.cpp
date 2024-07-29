@@ -37,7 +37,7 @@ void printSdlHelp() {
         "Usage: mojave-sdl [options]\n"
         "\n"
         "Options:\n"
-        "  --machine <name>   Machine preset (z80, m6502, m6507, trs80m1l1, trs80m1l2, trs80m3, zx80)\n"
+        "  --machine <name>   Machine preset (z80, m6502, m6507, trs80m1l1, trs80m1l2, trs80m3, zx80, zx81)\n"
         "                     Presets without a display use a blank placeholder window\n"
         "  --load-bin <path> [<addr>]\n"
         "                     Load binary at hex address or rom/ram alias\n"

@@ -7,6 +7,7 @@
 #include "machines/trs80m1l2/trs80m1l2_preset.hpp"
 #include "machines/trs80m3/trs80m3_preset.hpp"
 #include "machines/zx80/zx80_preset.hpp"
+#include "machines/zx81/zx81_preset.hpp"
 #include <cstring>
 
 namespace {
@@ -113,6 +114,18 @@ const BuiltinPresetEntry kPresets[] = {
             loadRegionsFromContract<Zx80PresetContract>(),
         },
         createZx80Machine,
+    },
+    {
+        {
+            "zx81",
+            BuiltinCpuFamily::Z80,
+            false,
+            Zx81PresetContract::includes_virtual_tty,
+            Zx81PresetContract::needs_virtual_screen,
+            Zx81PresetContract::guest_cpu_clock_hz,
+            loadRegionsFromContract<Zx81PresetContract>(),
+        },
+        createZx81Machine,
     },
 };
 

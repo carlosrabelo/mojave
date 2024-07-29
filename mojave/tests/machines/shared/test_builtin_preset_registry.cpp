@@ -11,6 +11,7 @@ TEST_CASE("Builtin preset registry lists supported presets", "[machine][fast]") 
     REQUIRE(isBuiltinPresetId("trs80m1l2"));
     REQUIRE(isBuiltinPresetId("trs80m3"));
     REQUIRE(isBuiltinPresetId("zx80"));
+    REQUIRE(isBuiltinPresetId("zx81"));
     REQUIRE_FALSE(isBuiltinPresetId("missing"));
 }
 
@@ -49,6 +50,14 @@ TEST_CASE("Builtin preset registry exposes descriptor metadata", "[machine][fast
     REQUIRE(zx80->guest_cpu_clock_hz == 3'250'000u);
     REQUIRE(zx80->load_regions.rom_end_exclusive == 0x1000);
     REQUIRE(zx80->load_regions.ram_end_exclusive == 0x4400);
+
+    const auto* zx81 = findBuiltinPreset("zx81");
+    REQUIRE(zx81 != nullptr);
+    REQUIRE_FALSE(zx81->includes_virtual_tty);
+    REQUIRE(zx81->needs_virtual_screen);
+    REQUIRE(zx81->guest_cpu_clock_hz == 3'250'000u);
+    REQUIRE(zx81->load_regions.rom_end_exclusive == 0x2000);
+    REQUIRE(zx81->load_regions.ram_end_exclusive == 0x4400);
 }
 
 TEST_CASE("Builtin CPU presets create without a Framebuffer", "[machine][fast]") {
@@ -98,12 +107,13 @@ TEST_CASE("Builtin preset registry creates machines", "[machine][fast]") {
     }
     REQUIRE(has_framebuffer);
     REQUIRE(createBuiltinMachine("zx80") != nullptr);
+    REQUIRE(createBuiltinMachine("zx81") != nullptr);
     REQUIRE(createBuiltinMachine("missing") == nullptr);
 }
 
 TEST_CASE("Builtin preset registry help lists registered ids", "[machine][fast]") {
     REQUIRE(formatBuiltinPresetIdsForHelp() ==
-            "z80, m6502, m6507, trs80m1l1, trs80m1l2, trs80m3, zx80");
+            "z80, m6502, m6507, trs80m1l1, trs80m1l2, trs80m3, zx80, zx81");
 }
 
 TEST_CASE("Builtin preset registry resolves z80 load aliases", "[machine][fast]") {
@@ -135,6 +145,10 @@ TEST_CASE("Builtin preset registry resolves z80 load aliases", "[machine][fast]"
     REQUIRE(resolveBuiltinLoadAlias("zx80", "rom", addr));
     REQUIRE(addr == 0x0000);
     REQUIRE(resolveBuiltinLoadAlias("zx80", "ram", addr));
+    REQUIRE(addr == 0x4000);
+    REQUIRE(resolveBuiltinLoadAlias("zx81", "rom", addr));
+    REQUIRE(addr == 0x0000);
+    REQUIRE(resolveBuiltinLoadAlias("zx81", "ram", addr));
     REQUIRE(addr == 0x4000);
     REQUIRE_FALSE(resolveBuiltinLoadAlias("z80", "bank2", addr));
 }

@@ -229,6 +229,27 @@ TEST_CASE("CLI resolves ram alias for zx80", "[cli][fast]") {
     REQUIRE(opts.loads[0].address == 0x4000);
 }
 
+TEST_CASE("CLI accepts zx81 machine preset", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--machine", "zx81"};
+    auto opts = parseCLI(3, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.machine == "zx81");
+}
+
+TEST_CASE("CLI resolves rom alias for zx81", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--machine", "zx81", "--load-bin", "code.bin", "rom"};
+    auto opts = parseCLI(6, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads[0].address == 0x0000);
+}
+
+TEST_CASE("CLI resolves ram alias for zx81", "[cli][fast]") {
+    const char* argv[] = {"mojave", "--machine", "zx81", "--load-bin", "code.bin", "ram"};
+    auto opts = parseCLI(6, const_cast<char**>(argv));
+    REQUIRE(opts.ok);
+    REQUIRE(opts.loads[0].address == 0x4000);
+}
+
 TEST_CASE("CLI parses multiple --load-bin", "[cli][fast]") {
     const char* argv[] = {"mojave", "--load-bin", "a.bin", "0000", "--load-bin", "b.bin", "8000"};
     auto opts = parseCLI(7, const_cast<char**>(argv));
