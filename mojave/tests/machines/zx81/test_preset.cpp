@@ -4,6 +4,7 @@
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
 #include "devices/zx81/display_file.hpp"
+#include "devices/zx81/character_rom.hpp"
 
 using Contract = Zx81PresetContract;
 
@@ -28,9 +29,9 @@ TEST_CASE("Sinclair ZX-81 preset contract memory map", "[machine][zx81][fast]") 
     REQUIRE(Contract::dfile_rows == Zx81DisplayFile::kRows);
     REQUIRE(Contract::dfile_min_collapsed_bytes == Zx81DisplayFile::kMinCollapsedBytes);
     REQUIRE(Contract::dfile_max_bytes == Zx81DisplayFile::kMaxBytes);
-    REQUIRE(Contract::charset_rom_start == 0x1E00);
-    REQUIRE(Contract::charset_rom_end_exclusive == 0x2000);
-    REQUIRE(Contract::charset_i_register == 0x1E);
+    REQUIRE(Contract::charset_rom_start == Zx81CharacterRom::kCharsetBase);
+    REQUIRE(Contract::charset_rom_end_exclusive == Zx81CharacterRom::kCharsetEndExclusive);
+    REQUIRE(Contract::charset_i_register == Zx81CharacterRom::kIRegister);
     REQUIRE(Contract::video_frame_hz == 50);
     REQUIRE(Contract::video_framebuffer_width == 256);
     REQUIRE(Contract::video_framebuffer_height == 192);
