@@ -5,6 +5,7 @@
 #include "cpus/z80.hpp"
 #include "devices/zx81/display_file.hpp"
 #include "devices/zx81/character_rom.hpp"
+#include "devices/zx81/video_generator.hpp"
 
 using Contract = Zx81PresetContract;
 
@@ -32,11 +33,11 @@ TEST_CASE("Sinclair ZX-81 preset contract memory map", "[machine][zx81][fast]") 
     REQUIRE(Contract::charset_rom_start == Zx81CharacterRom::kCharsetBase);
     REQUIRE(Contract::charset_rom_end_exclusive == Zx81CharacterRom::kCharsetEndExclusive);
     REQUIRE(Contract::charset_i_register == Zx81CharacterRom::kIRegister);
-    REQUIRE(Contract::video_frame_hz == 50);
-    REQUIRE(Contract::video_framebuffer_width == 256);
-    REQUIRE(Contract::video_framebuffer_height == 192);
-    REQUIRE(Contract::cdflag_slow_display_bit == 7);
-    REQUIRE(Contract::cdflag_slow_display_mask == 0x80);
+    REQUIRE(Contract::video_frame_hz == Zx81VideoGenerator::kFrameHz);
+    REQUIRE(Contract::video_framebuffer_width == Zx81VideoGenerator::kFramebufferWidth);
+    REQUIRE(Contract::video_framebuffer_height == Zx81VideoGenerator::kFramebufferHeight);
+    REQUIRE(Contract::cdflag_slow_display_bit == Zx81VideoGenerator::kCdflagSlowDisplayBit);
+    REQUIRE(Contract::cdflag_slow_display_mask == Zx81VideoGenerator::kCdflagSlowDisplayMask);
     REQUIRE(Contract::nmi_hz == 50u);
     REQUIRE(Contract::nmi_cycles_per_interrupt == 65'000u);
     REQUIRE(Contract::keyboard_port_low_byte == 0x00FE);

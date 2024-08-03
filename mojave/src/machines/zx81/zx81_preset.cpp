@@ -2,6 +2,8 @@
 #include "machines/shared/machine.hpp"
 #include "cpus/z80.hpp"
 #include "devices/shared/memory.hpp"
+#include "devices/shared/framebuffer.hpp"
+#include "devices/zx81/video_generator.hpp"
 
 namespace {
 
@@ -19,6 +21,14 @@ std::unique_ptr<Machine> createZx81Machine() {
 
     auto ram = std::make_unique<Memory>(Contract::ram_end_exclusive - Contract::ram_start);
     machine->attachDevice(std::move(ram), Contract::ram_start, Contract::ram_end_exclusive);
+
+    auto fb = std::make_unique<Framebuffer>(Zx81VideoGenerator::kFramebufferWidth,
+                                            Zx81VideoGenerator::kFramebufferHeight);
+    Framebuffer* fb_ptr = fb.get();
+    machine->addOwnedDevice(std::move(fb));
+
+    auto video = std::make_unique<Zx81VideoGenerator>(*fb_ptr, machine->bus(), Contract::guest_cpu_clock_hz);
+    machine->addOwnedDevice(std::move(video));
 
     return machine;
 }
