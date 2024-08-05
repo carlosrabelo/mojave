@@ -61,7 +61,7 @@ struct Zx81PresetContract {
     static constexpr uint32_t cassette_baud = 250;
     static constexpr uint8_t cassette_ear_bit = 0x80;
 
-    // Video RAM mirror trap region (wired in later TODO items)
+    // Video RAM mirror trap (see devices/zx81/ram_mirror.hpp)
     static constexpr uint16_t vram_mirror_start = 0xC000;
     static constexpr uint32_t vram_mirror_end_exclusive = 65536u;
 

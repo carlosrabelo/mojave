@@ -4,6 +4,7 @@
 #include "devices/shared/memory.hpp"
 #include "devices/shared/framebuffer.hpp"
 #include "devices/zx81/video_generator.hpp"
+#include "devices/zx81/ram_mirror.hpp"
 
 namespace {
 
@@ -20,7 +21,11 @@ std::unique_ptr<Machine> createZx81Machine() {
     machine->attachDevice(std::move(rom), Contract::rom_start, Contract::rom_end_exclusive);
 
     auto ram = std::make_unique<Memory>(Contract::ram_end_exclusive - Contract::ram_start);
+    Memory* ram_ptr = ram.get();
     machine->attachDevice(std::move(ram), Contract::ram_start, Contract::ram_end_exclusive);
+
+    auto mirror = std::make_unique<Zx81RamMirror>(*ram_ptr);
+    machine->attachDevice(std::move(mirror), Zx81RamMirror::kMirrorStart, 0);
 
     auto fb = std::make_unique<Framebuffer>(Zx81VideoGenerator::kFramebufferWidth,
                                             Zx81VideoGenerator::kFramebufferHeight);

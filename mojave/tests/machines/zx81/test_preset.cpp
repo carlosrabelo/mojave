@@ -6,6 +6,7 @@
 #include "devices/zx81/display_file.hpp"
 #include "devices/zx81/character_rom.hpp"
 #include "devices/zx81/video_generator.hpp"
+#include "devices/zx81/ram_mirror.hpp"
 
 using Contract = Zx81PresetContract;
 
@@ -47,8 +48,8 @@ TEST_CASE("Sinclair ZX-81 preset contract memory map", "[machine][zx81][fast]") 
     REQUIRE(Contract::io_port_attach_end_exclusive == 0x0000);
     REQUIRE(Contract::cassette_baud == 250);
     REQUIRE(Contract::cassette_ear_bit == 0x80);
-    REQUIRE(Contract::vram_mirror_start == 0xC000);
-    REQUIRE(Contract::vram_mirror_end_exclusive == 65536u);
+    REQUIRE(Contract::vram_mirror_start == Zx81RamMirror::kMirrorStart);
+    REQUIRE(Contract::vram_mirror_end_exclusive == Zx81RamMirror::kMirrorEndExclusive);
 
     REQUIRE(Contract::load_rom_address == 0x0000);
     REQUIRE(Contract::load_rom_end_exclusive == 0x2000);
@@ -88,7 +89,6 @@ TEST_CASE("Sinclair ZX-81 unmapped addresses read floating bus", "[machine][zx81
     REQUIRE(machine->bus().read(0x3FFF) == 0xFF);
     REQUIRE(machine->bus().read(0x4400) == 0xFF);
     REQUIRE(machine->bus().read(0xBFFF) == 0xFF);
-    REQUIRE(machine->bus().read(0xC000) == 0xFF);
 }
 
 TEST_CASE("Sinclair ZX-81 tiny program runs from RAM", "[machine][zx81][fast]") {

@@ -186,7 +186,7 @@ Reuse `devices/sinclair/`. ULA/SLOW NMI and RAM mirror stay under `devices/zx81/
 - [x] Display file layout (DFILE: HALT-prefixed lines, 32 columns; `D_FILE` at 0x400C)
 - [x] ROM character bitmap reader (64 glyphs × 8×8 from 8 KiB ROM)
 - [x] ULA video (50 Hz, DFILE → 256×192; FAST blanks, SLOW keeps display via NMI)
-- [ ] RAM mirror / VRAM trap (0xC000+)
+- [x] RAM mirror / VRAM trap (0xC000+)
 - [ ] Keyboard matrix (reuse Sinclair family)
 - [ ] Cassette EAR/MIC interface (idle levels, no image transport)
 - [ ] Machine clock 3.25 MHz + NMI for SLOW mode
