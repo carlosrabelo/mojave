@@ -8,6 +8,7 @@
 #include "devices/zx81/video_generator.hpp"
 #include "devices/zx81/ram_mirror.hpp"
 #include "devices/sinclair/keyboard.hpp"
+#include "devices/sinclair/cassette.hpp"
 
 using Contract = Zx81PresetContract;
 
@@ -47,8 +48,8 @@ TEST_CASE("Sinclair ZX-81 preset contract memory map", "[machine][zx81][fast]") 
     REQUIRE(Contract::keyboard_bits_per_row == SinclairKeyboard::kBitsPerRow);
     REQUIRE(Contract::io_port_attach_start == 0x0000);
     REQUIRE(Contract::io_port_attach_end_exclusive == 0x0000);
-    REQUIRE(Contract::cassette_baud == 250);
-    REQUIRE(Contract::cassette_ear_bit == 0x80);
+    REQUIRE(Contract::cassette_baud == SinclairCassette::kBaud);
+    REQUIRE(Contract::cassette_ear_bit == SinclairCassette::kEarBit);
     REQUIRE(Contract::vram_mirror_start == Zx81RamMirror::kMirrorStart);
     REQUIRE(Contract::vram_mirror_end_exclusive == Zx81RamMirror::kMirrorEndExclusive);
 
