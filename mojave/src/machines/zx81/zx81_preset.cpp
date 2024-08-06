@@ -5,6 +5,8 @@
 #include "devices/shared/framebuffer.hpp"
 #include "devices/zx81/video_generator.hpp"
 #include "devices/zx81/ram_mirror.hpp"
+#include "devices/sinclair/keyboard.hpp"
+#include "devices/zx81/port_decode.hpp"
 
 namespace {
 
@@ -34,6 +36,14 @@ std::unique_ptr<Machine> createZx81Machine() {
 
     auto video = std::make_unique<Zx81VideoGenerator>(*fb_ptr, machine->bus(), Contract::guest_cpu_clock_hz);
     machine->addOwnedDevice(std::move(video));
+
+    auto keyboard = std::make_unique<SinclairKeyboard>();
+    SinclairKeyboard* keyboard_ptr = keyboard.get();
+    machine->addOwnedDevice(std::move(keyboard));
+
+    auto ports = std::make_unique<Zx81PortDecode>(*keyboard_ptr);
+    machine->bus().attachPort(*ports, Contract::io_port_attach_start, Contract::io_port_attach_end_exclusive);
+    machine->addOwnedDevice(std::move(ports));
 
     return machine;
 }

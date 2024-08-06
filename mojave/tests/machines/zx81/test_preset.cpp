@@ -7,6 +7,7 @@
 #include "devices/zx81/character_rom.hpp"
 #include "devices/zx81/video_generator.hpp"
 #include "devices/zx81/ram_mirror.hpp"
+#include "devices/sinclair/keyboard.hpp"
 
 using Contract = Zx81PresetContract;
 
@@ -41,9 +42,9 @@ TEST_CASE("Sinclair ZX-81 preset contract memory map", "[machine][zx81][fast]") 
     REQUIRE(Contract::cdflag_slow_display_mask == Zx81VideoGenerator::kCdflagSlowDisplayMask);
     REQUIRE(Contract::nmi_hz == 50u);
     REQUIRE(Contract::nmi_cycles_per_interrupt == 65'000u);
-    REQUIRE(Contract::keyboard_port_low_byte == 0x00FE);
-    REQUIRE(Contract::keyboard_row_count == 8);
-    REQUIRE(Contract::keyboard_bits_per_row == 5);
+    REQUIRE(Contract::keyboard_port_low_byte == SinclairKeyboard::kPortLowByte);
+    REQUIRE(Contract::keyboard_row_count == SinclairKeyboard::kRowCount);
+    REQUIRE(Contract::keyboard_bits_per_row == SinclairKeyboard::kBitsPerRow);
     REQUIRE(Contract::io_port_attach_start == 0x0000);
     REQUIRE(Contract::io_port_attach_end_exclusive == 0x0000);
     REQUIRE(Contract::cassette_baud == 250);
