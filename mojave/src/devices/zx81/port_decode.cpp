@@ -10,6 +10,7 @@ void Zx81PortDecode::write(uint16_t /*address*/, uint8_t /*value*/) {}
 
 void Zx81PortDecode::reset() {
     cassette_.reset();
+    nmi_generator_on_ = false;
 }
 
 uint8_t Zx81PortDecode::readPort(uint16_t port) {
@@ -23,6 +24,8 @@ uint8_t Zx81PortDecode::readPort(uint16_t port) {
     return static_cast<uint8_t>((keys & 0x7Fu) | cassette_.earBits());
 }
 
-void Zx81PortDecode::writePort(uint16_t /*port*/, uint8_t /*value*/) {
+void Zx81PortDecode::writePort(uint16_t port, uint8_t /*value*/) {
     cassette_.onAnyOut();
+    // A0=0 (port FE family): start NMI generator. A0=1 (FD family): stop it.
+    nmi_generator_on_ = ((port & 0x0001u) == 0);
 }

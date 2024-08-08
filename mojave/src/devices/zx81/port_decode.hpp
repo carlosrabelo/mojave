@@ -7,8 +7,8 @@
 #include "devices/sinclair/cassette.hpp"
 #include "devices/sinclair/keyboard.hpp"
 
-// ZX-81 I/O port demux: keyboard matrix reads on 0xFE-family ports plus
-// cassette EAR/MIC side effects. NMI generator is wired in a later item.
+// ZX-81 I/O port demux: keyboard matrix reads on 0xFE-family ports, cassette
+// EAR/MIC side effects, and NMI generator enable (OUT FE) / disable (OUT FD).
 class Zx81PortDecode : public Device, public PortDevice {
 public:
     explicit Zx81PortDecode(SinclairKeyboard& keyboard);
@@ -23,9 +23,12 @@ public:
     const SinclairCassette& cassette() const { return cassette_; }
     SinclairCassette& cassette() { return cassette_; }
 
+    bool nmiGeneratorOn() const { return nmi_generator_on_; }
+
 private:
     SinclairKeyboard& keyboard_;
     SinclairCassette cassette_;
+    bool nmi_generator_on_ = false;
 };
 
 #endif

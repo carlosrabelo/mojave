@@ -34,16 +34,19 @@ std::unique_ptr<Machine> createZx81Machine() {
     Framebuffer* fb_ptr = fb.get();
     machine->addOwnedDevice(std::move(fb));
 
-    auto video = std::make_unique<Zx81VideoGenerator>(*fb_ptr, machine->bus(), Contract::guest_cpu_clock_hz);
-    machine->addOwnedDevice(std::move(video));
-
     auto keyboard = std::make_unique<SinclairKeyboard>();
     SinclairKeyboard* keyboard_ptr = keyboard.get();
     machine->addOwnedDevice(std::move(keyboard));
 
     auto ports = std::make_unique<Zx81PortDecode>(*keyboard_ptr);
+    Zx81PortDecode* ports_ptr = ports.get();
     machine->bus().attachPort(*ports, Contract::io_port_attach_start, Contract::io_port_attach_end_exclusive);
     machine->addOwnedDevice(std::move(ports));
+
+    auto& z80 = dynamic_cast<Z80&>(machine->cpu());
+    auto video =
+        std::make_unique<Zx81VideoGenerator>(*fb_ptr, machine->bus(), z80, *ports_ptr, Contract::guest_cpu_clock_hz);
+    machine->addOwnedDevice(std::move(video));
 
     return machine;
 }

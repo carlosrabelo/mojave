@@ -51,6 +51,34 @@ TEST_CASE("ZX-81 port decode ignores odd ports for keyboard demux", "[device][zx
     REQUIRE(ports.readPort(0xFDFF) == 0xFF);
 }
 
+TEST_CASE("ZX-81 port decode enables NMI on OUT FE and disables on OUT FD",
+          "[device][zx81][fast]") {
+    SinclairKeyboard keyboard;
+    Zx81PortDecode ports(keyboard);
+
+    REQUIRE_FALSE(ports.nmiGeneratorOn());
+
+    ports.writePort(0x00FE, 0x00);
+    REQUIRE(ports.nmiGeneratorOn());
+
+    ports.writePort(0x00FD, 0x00);
+    REQUIRE_FALSE(ports.nmiGeneratorOn());
+}
+
+TEST_CASE("ZX-81 port decode reset clears NMI generator and cassette", "[device][zx81][fast]") {
+    SinclairKeyboard keyboard;
+    Zx81PortDecode ports(keyboard);
+
+    ports.writePort(0x00FE, 0x00);
+    ports.readPort(0x7FFE);
+    REQUIRE(ports.nmiGeneratorOn());
+    REQUIRE_FALSE(ports.cassette().micHigh());
+
+    ports.reset();
+    REQUIRE_FALSE(ports.nmiGeneratorOn());
+    REQUIRE(ports.cassette().micHigh());
+}
+
 TEST_CASE("ZX-81 machine IN reads the Sinclair keyboard matrix", "[machine][zx81][fast]") {
     auto machine = createZx81Machine();
 
