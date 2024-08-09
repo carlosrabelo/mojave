@@ -9,11 +9,16 @@ MachineKeyboardBridge::MachineKeyboardBridge(Trs80HostKeyboardBridge bridge)
 MachineKeyboardBridge::MachineKeyboardBridge(Zx80HostKeyboardBridge bridge)
     : bridge_(std::move(bridge)) {}
 
+MachineKeyboardBridge::MachineKeyboardBridge(Zx81HostKeyboardBridge bridge)
+    : bridge_(std::move(bridge)) {}
+
 std::optional<MachineKeyboardBridge> MachineKeyboardBridge::fromMachine(Machine& machine) {
     if (auto m3 = Trs80M3HostKeyboardBridge::fromMachine(machine))
         return MachineKeyboardBridge(std::move(*m3));
     if (auto m1 = Trs80HostKeyboardBridge::fromMachine(machine))
         return MachineKeyboardBridge(std::move(*m1));
+    if (auto zx81 = Zx81HostKeyboardBridge::fromMachine(machine))
+        return MachineKeyboardBridge(std::move(*zx81));
     if (auto zx80 = Zx80HostKeyboardBridge::fromMachine(machine))
         return MachineKeyboardBridge(std::move(*zx80));
     return std::nullopt;
