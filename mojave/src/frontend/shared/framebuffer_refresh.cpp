@@ -3,6 +3,7 @@
 #include "devices/shared/framebuffer.hpp"
 #include "devices/trs80m3/video_controller.hpp"
 #include "devices/zx80/video_generator.hpp"
+#include "devices/zx81/video_generator.hpp"
 
 namespace {
 
@@ -23,6 +24,10 @@ void refreshMachineFramebuffer(Machine& machine, Framebuffer& fb) {
             return;
         }
         if (auto* video = dynamic_cast<Zx80VideoGenerator*>(dev.get())) {
+            video->refreshFramebuffer();
+            return;
+        }
+        if (auto* video = dynamic_cast<Zx81VideoGenerator*>(dev.get())) {
             video->refreshFramebuffer();
             return;
         }
