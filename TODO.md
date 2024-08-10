@@ -192,7 +192,7 @@ Reuse `devices/sinclair/`. ULA/SLOW NMI and RAM mirror stay under `devices/zx81/
 - [x] Machine clock 3.25 MHz + NMI for SLOW mode
 - [x] Plug into SDL/Qt6 virtual screen
 - [x] Wire keyboard matrix to SDL/Qt6 host input
-- [ ] Host layout keyboard typing (SDL/Qt6; ZX key legends)
+- [x] Host layout keyboard typing (SDL/Qt6; ZX key legends)
 
 ## Removable media
 
